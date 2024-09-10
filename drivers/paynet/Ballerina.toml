@@ -1,0 +1,15 @@
+[package]
+org = "digitalpaymentshub"
+name = "digital.payments.hub.paynet"
+version = "0.0.3"
+distribution = "2201.9.2"
+authors = ["Ballerina"]
+# keywords = ["Healthcare", "FHIR", "R4", "Parser"]
+# repository = "https://github.com/ballerina-platform/module-ballerinax-health.fhir.r4"
+# export = ["health.fhir.r4.parser"]
+
+[[dependency]]
+org = "ballerinax"
+name = "financial.iso20022"
+version = "0.0.1"
+repository = "local"
