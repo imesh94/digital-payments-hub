@@ -1,0 +1,13 @@
+[package]
+org = "digitalpaymentshub"
+name = "digital.payments.hub.driver_manager"
+version = "0.0.2"
+distribution = "2201.9.2"
+authors = ["Ballerina"]
+visibility="private"
+
+[[dependency]]
+org = "ballerinax"
+name = "financial.iso20022"
+version = "0.0.1"
+repository = "local"
