@@ -1,0 +1,8 @@
+[driver]
+name = "lankapay"
+code = "LK"
+[driver.inbound]
+transport = "tcp"
+port = 8085
+[driver.outbound]
+baseUrl = "http://localhost:9093"
