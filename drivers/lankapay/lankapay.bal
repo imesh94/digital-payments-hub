@@ -1,9 +1,15 @@
 
+<<<<<<< HEAD
 import ballerina/constraint;
+=======
+import digital.payments.hub.util;
+
+>>>>>>> fcd6571 (Rename util package)
 import ballerina/http;
 import ballerina/log;
 import ballerina/uuid;
 
+<<<<<<< HEAD
 import ballerinax/financial.iso8583;
 import ballerinax/financial.iso20022;
 
@@ -119,3 +125,123 @@ public function handleInbound(byte[] & readonly data) returns byte[]|error {
 };
 
 
+=======
+public function main() returns error? {
+    error? registrationError = registerDriver();
+
+    if (registrationError is error) {
+        log:printError("Error occurred while registering driver in ayments hub. " + registrationError.message());
+    }
+}
+
+public function publishEvent() {
+
+    log:printInfo("Publishing event to payments hub.");
+    json|http:ClientError event = hubClient->/payments\-hub/events.post({
+        id: "randomNumber",
+        correlationId: "randomNumber",
+        eventType: "SAMPLE_EVENT",
+        origin: "LankaPay",
+        destination: "Paynet",
+        eventTimestamp: "timestamp",
+        status: "success",
+        errorMessage: "N/A"
+    });
+    if (event is error) {
+        log:printInfo("Error occurred when publishing event");
+    } else {
+        log:printInfo("\n Event published:" + event.toJsonString());
+    }
+}
+
+public function getDestinationDriverMetadata(string countryCode) returns DriverMetadata|error? {
+
+    return check hubClient->/payments\-hub/metadata/[countryCode];
+}
+
+public function forwardRequestToDestinationDriver(string data, string endpoint) returns json|error? {
+
+    log:printInfo("Sending request to the destination driver");
+    http:Client destinationClient = check new (endpoint);
+
+    json payload = {"data": data};
+    http:Request request = new;
+    request.setHeader(http:CONTENT_TYPE, "application/json");
+    request.setJsonPayload(payload);
+
+    http:Response|error response = destinationClient->post("/payments", request);
+
+    if (response is http:Response) {
+        json responsePayload = check response.getJsonPayload();
+        log:printInfo("Received response from destination driver");
+        return responsePayload;
+    } else {
+        log:printError("Failed to send POST request to the destination driver");
+        return response;
+    }
+}
+
+service on new tcp:Listener(inboundPort) {
+    remote function onConnect(tcp:Caller caller) returns tcp:ConnectionService {
+        io:println("Client connected to driver: ", caller.remotePort);
+        return new DriverInboundService();
+    }
+}
+
+service class DriverInboundService {
+    *tcp:ConnectionService;
+
+    remote function onBytes(tcp:Caller caller, readonly & byte[] data) returns tcp:Error? {
+
+        string destinationDriverEndpoint;
+        publishEvent();
+        log:printInfo("Reading incoming iso8583 message");
+
+        log:printInfo("Destination driver metadata not found in cache. Getting metadata from payments hub.");
+        DriverMetadata|error? destinationDriverMetadata = getDestinationDriverMetadata("MY");
+        if (destinationDriverMetadata is DriverMetadata) {
+            destinationDriverEndpoint = destinationDriverMetadata.paymentEndpoint;
+        } else {
+            log:printError("Error occurred while getting destination driver metadata from payments hub. " +
+                    "Aborting transaction");
+            return;
+        }
+        log:printInfo("Destination driver payment endpoint is : " + destinationDriverEndpoint);
+
+        json|error? destinationResponse = forwardRequestToDestinationDriver("dummy Data", destinationDriverEndpoint);
+        if (destinationResponse is json) {
+            string responseString = destinationResponse.toString();
+            log:printInfo("Response :" + responseString);
+        } else {
+            log:printInfo("Error response received from destination driver");
+        }
+
+        check caller->writeBytes(data);
+    }
+
+    remote function onError(tcp:Error err) {
+        log:printError("An error occurred", 'error = err);
+    }
+
+    remote function onClose() {
+        io:println("Client left");
+    }
+}
+
+service / on new http:Listener(paymentPort) {
+
+    resource function post payments(@http:Payload json data) returns json {
+
+        log:printInfo("Received payments request: " + data.toJsonString());
+
+        json response = {
+            "status": "success",
+            "message": "Payment processed successfully by LankaPay",
+            "transactionId": "1234567890"
+        };
+
+        return response;
+    }
+
+}
+>>>>>>> fcd6571 (Rename util package)
