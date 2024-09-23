@@ -1,162 +1,125 @@
-// Copyright 2024 [name of copyright owner]
-// 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// 
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
+import ballerina/constraint;
 import ballerina/http;
+import ballerina/mime;
 import ballerina/log;
+import ballerinax/financial.iso20022;
 
-http:Client hubClient = check new ("http://localhost:9090");
-int inboundPort = 8087;
-int paymentPort = 9097;
+import drivers.paynet.models;
+import digitalpaymentshub/drivers.util;
 
-type Event readonly & record {
-    string id;
-    string correlationId;
-    string eventType;
-    string origin;
-    string destination;
-    string eventTimestamp;
-    string status;
-    string errorMessage;
+http:Client paynetClient = check new ("http://localhost:8086/v1/picasso-guard/banks/nad/v2"); // todo move to init function
+
+# Paynet driver service.
+# bound to port `9091`.
+service http:InterceptableService / on new http:Listener(9091) {
+
+    resource function post transact(http:Caller caller, http:Request req) returns error? {
+        
+        // Extract the json payload from the request
+        json payload = check req.getJsonPayload();
+        http:Response response = check handleOutbound(payload);
+        // return response;
+        check caller->respond(response);
+    }
+
+    public function createInterceptors() returns http:Interceptor|http:Interceptor[] {
+        return new util:ResponseErrorInterceptor();
+    }
+}
+
+
+public function handleInbound(byte[] & readonly data) returns string? {
+    return;
 };
 
-type DriverMetadata readonly & record {
-    string driver;
-    string countryCode;
-    string inboundEndpoint;
-    string paymentEndpoint;
-};
+public function handleOutbound(json payload) returns http:Response|error {
 
-public function main() returns error? {
-    error? registrationError = registerDriver();
-
-    if (registrationError is error) {
-        log:printError("Error occurred while registering driver in payments hub. " + registrationError.message());
-    }
-}
-
-public function registerDriver() returns error? {
-
-    log:printInfo("Registering driver in payments hub.");
-    DriverMetadata driverMetadata = check hubClient->/payments\-hub/register.post({
-        driver: "PayNet",
-        countryCode: "MY",
-        inboundEndpoint: "http://localhost:" + inboundPort.toString(),
-        paymentEndpoint: "http://localhost:" + paymentPort.toString()
-    });
-    log:printInfo("POST request:" + driverMetadata.toJsonString());
-}
-
-public function publishEvent() {
-
-    log:printInfo("Publishing event to payments hub.");
-    json|http:ClientError event = hubClient->/payments\-hub/events.post({
-        id: "randomNumber",
-        correlationId: "randomNumber",
-        eventType: "SAMPLE_EVENT",
-        origin: "PayNet",
-        destination: "LankaPay",
-        eventTimestamp: "timestamp",
-        status: "success",
-        errorMessage: "N/A"
-    });
-    if (event is error) {
-        log:printInfo("Error occurred when publishing event");
-    } else {
-        log:printInfo("\n Event published:" + event.toJsonString());
-    }
-}
-
-public function getDestinationDriverMetadata(string countryCode) returns DriverMetadata|error? {
-
-    return check hubClient->/payments\-hub/metadata/[countryCode];
-}
-
-public function forwardRequestToDestinationDriver(string data, string endpoint) returns json|error? {
-
-    log:printInfo("Sending request to the destination driver");
-    http:Client destinationClient = check new (endpoint);
-
-    json payload = {"data": data};
-    http:Request request = new;
-    request.setHeader(http:CONTENT_TYPE, "application/json");
-    request.setJsonPayload(payload);
-
-    http:Response|error response = destinationClient->post("/payments", request);
-
-    if (response is http:Response) {
-        json responsePayload = check response.getJsonPayload();
-        log:printInfo("Received response from destination driver");
-        return responsePayload;
-    } else {
-        log:printError("Failed to send POST request to the destination driver");
-        return response;
-    }
-}
-
-service / on new http:Listener(inboundPort) {
-
-    resource function post inbound(@http:Payload json data) returns json|error {
-
-        log:printInfo("Received payment request via HTTP: " + data.toJsonString());
-
-        string destinationDriverEndpoint;
-        publishEvent();
-        log:printInfo("Reading incoming 20022 message");
-
-        log:printInfo("Destination driver metadata not found in cache. Getting metadata from payments hub.");
-        DriverMetadata|error? destinationDriverMetadata = getDestinationDriverMetadata("LK");
-        if (destinationDriverMetadata is DriverMetadata) {
-            destinationDriverEndpoint = destinationDriverMetadata.paymentEndpoint;
+    iso20022:FIToFICstmrCdtTrf|error iso20022ValidatedMsg = constraint:validate(payload);
+    // if msg is of type pacs 008
+    if (iso20022ValidatedMsg is iso20022:FIToFICstmrCdtTrf) {
+        iso20022:FIToFICstmrCdtTrf isoPacs008Msg = check iso20022ValidatedMsg.cloneWithType(iso20022:FIToFICstmrCdtTrf);
+        // Differentiate proxy resolution and fund transfer request
+        if (isProxyRequest(isoPacs008Msg.SplmtryData)) {
+            // proxy resolution request to PayNet
+            models:PrxyLookUpRspnCBFT|error paynetProxyResolution = getProxyResolution(isoPacs008Msg);
+            if (paynetProxyResolution is error) {
+                log:printError("Error while resolving proxy: " + paynetProxyResolution.message());
+                return error("Error while resolving proxy: " + paynetProxyResolution.message());
+            }
+            // transform to iso 20022 response pacs 002.001.14
+            iso20022:FIToFIPmtStsRpt iso20022Response = transformPrxy004toPacs002(paynetProxyResolution);
+            // add original msg id
+            iso20022Response.GrpHdr.MsgId = isoPacs008Msg.GrpHdr.MsgId;
+            http:Response httpResponse = new;
+            httpResponse.setPayload(iso20022Response.toJsonString());
+            return httpResponse;
         } else {
-            log:printError("Error occurred while getting destination driver metadata from payments hub. " +
-                    "Aborting transaction.");
-            return {
-                "status": "failure",
-                "message": "Error retrieving destination driver metadata."
-            };
-        }
+            // fund transfer request 
+            models:fundTransferResponse|error paynetProxyRegistartionResponse = 
+                postPaynetProxyRegistration(isoPacs008Msg);
+            if (paynetProxyRegistartionResponse is error) {
+                log:printError("Error while registering proxy: " + paynetProxyRegistartionResponse.message());
+                return error("Error while registering proxy: " + paynetProxyRegistartionResponse.message());
+            }
+            // transform to iso 20022 response pacs 002.001.14
+            iso20022:FIToFIPmtStsRpt iso20022Response = 
+                transformFundTransferResponsetoPacs002(paynetProxyRegistartionResponse, isoPacs008Msg);
 
-        log:printInfo("Destination driver payment endpoint is: " + destinationDriverEndpoint);
-
-        // Forward the request to the destination driver
-        json|error? destinationResponse = forwardRequestToDestinationDriver(data.toString(), destinationDriverEndpoint);
-        if (destinationResponse is json) {
-            log:printInfo("Received response from destination driver: " + destinationResponse.toJsonString());
-            return destinationResponse;
-        } else {
-            log:printError("Error response received from destination driver");
-            return {
-                "status": "failure",
-                "message": "Error occurred while processing the request."
-            };
+            http:Response httpResponse = new;
+            httpResponse.setPayload(iso20022Response.toJsonString());
+            return httpResponse;
         }
+    } else {
+        // only proxy resolution and fund transfer requests are supported
+        log:printError("Request type not supported");
+        return error("Request type not supported");
     }
 }
 
-// Mocked service to simulate a destination driver listening on port 9591
-service / on new http:Listener(paymentPort) {
+function getProxyResolution(iso20022:FIToFICstmrCdtTrf isoPacs008Msg) returns models:PrxyLookUpRspnCBFT|error {
+    
+    string bicCode = isoPacs008Msg.CdtTrfTxInf[0].DbtrAcct?.Id?.Othr?.Id ?: "";
+    iso20022:SplmtryData[]? supplementaryData = isoPacs008Msg.SplmtryData;
+    string proxyType = resolveProxyType(supplementaryData);
+    string proxy = resolveProxy(supplementaryData);
 
-    resource function post payments(@http:Payload json data) returns json {
+    if (bicCode == "" || proxyType == "" || proxy == "") {
+        return error("Error while resolving proxy. Required data not found");
+    }
 
-        log:printInfo("Received payments request: " + data.toJsonString());
+    string xBusinessMsgId = check generateXBusinessMsgId(bicCode);
+    models:PrxyLookUpRspnCBFT response = check paynetClient->/resoluion/[proxyType]/[proxy]({
+        Accept: mime:APPLICATION_JSON,
+        Authorization: "Bearer 12345-6789",
+        "X-Business-Message-Id": xBusinessMsgId,
+        "X-Client-Id": "123456",
+        "X-Gps-Coordinates": "3.1234, 101.1234",
+        "X-Ip-Address": "172.110.12.10"
+    });
+    log:printDebug("Response received from Paynet: " + response.toBalString());
+    return response;
+}
 
-        json response = {
-            "status": "success",
-            "message": "Payment processed successfully by PayNet",
-            "transactionId": "1234567890"
+function postPaynetProxyRegistration(iso20022:FIToFICstmrCdtTrf isoPacs008Msg) 
+    returns models:fundTransferResponse|error {
+
+    models:fundTransfer|error proxyRegistrationPayload = transformPacs008toFundTransfer(isoPacs008Msg);
+    if proxyRegistrationPayload is models:fundTransfer {
+        string bicCode = isoPacs008Msg.CdtTrfTxInf[0].DbtrAcct?.Id?.Othr?.Id ?: "";
+        string xBusinessMsgId = check generateXBusinessMsgId(bicCode);
+        map<string> headers = {
+            Accept: mime:APPLICATION_JSON,
+            Authorization: "Bearer 12345-6789",
+            "X-Business-Message-Id": xBusinessMsgId,
+            "X-Client-Id": "123456",
+            "X-Gps-Coordinates": "3.1234, 101.1234",
+            "X-Ip-Address": "172.10.100.23"
         };
-
+        models:fundTransferResponse response = check paynetClient->post("/register", proxyRegistrationPayload, headers);
+        log:printDebug("Response received from Paynet: " + response.toBalString());
         return response;
+    } else {
+        log:printError("Error while building proxy registration payload: " + proxyRegistrationPayload.message());
+        return error("Error while building proxy registration payload: " + proxyRegistrationPayload.message());
     }
-}
+};
