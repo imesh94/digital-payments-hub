@@ -30,25 +30,28 @@ type Event readonly & record {
 };
 
 type Metadata readonly & record {
-    string driver;
+    string driverName;
     string countryCode;
-    string inboundEndpoint;
     string paymentEndpoint;
 };
 
-map<Metadata> metadataMap = {};
 EventPublisher eventPublisher = new EventPublisher("./driver-manager-events.log");
 
 service /payments\-hub on new http:Listener(port) {
+
+    map<Metadata> metadataMap = {};
+
     resource function get metadata() returns Metadata[] {
 
-        return metadataMap.toArray();
+        log:printInfo("Received metadata request for all countries");
+        Metadata[] metadataArray = self.metadataMap.toArray();
+        return metadataArray;
     }
 
     resource function get metadata/[string countryCode]() returns Metadata|http:NotFound {
 
         log:printInfo("Received metadata request for country code " + countryCode);
-        Metadata? metadata = metadataMap[countryCode];
+        Metadata? metadata = self.metadataMap[countryCode];
         if metadata is () {
             return http:NOT_FOUND;
         } else {
@@ -58,9 +61,9 @@ service /payments\-hub on new http:Listener(port) {
 
     resource function post register(@http:Payload Metadata metadata) returns Metadata {
 
-        log:printInfo("Received metadata request");
-        metadataMap[metadata.countryCode] = metadata;
-        log:printInfo(metadata.driver + " driver registered in payments hub.");
+        log:printInfo("Received driver registration request");
+        self.metadataMap[metadata.countryCode] = metadata;
+        log:printInfo(metadata.driverName + " driver registered in payments hub with code " + metadata.countryCode);
         return metadata;
     }
 
