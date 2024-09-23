@@ -1,17 +1,25 @@
+// Copyright 2024 [name of copyright owner]
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import ballerina/http;
 import ballerina/lang.runtime;
 import ballerina/log;
 import ballerina/tcp;
 
-http:Client hubClient = check new ("localhost:9090");
+http:Client hubClient = check new ("localhost:9090"); //ToDo: Remove
+http:Client paymentNetworkClient = check new ("localhost:9092"); //ToDo: Remove
 map<http:Client> httpClientMap = {};
-
-type Metadata readonly & record {
-    string driver;
-    string countryCode;
-    string inboundEndpoint;
-    string paymentEndpoint;
-};
 
 public function initializeDriverListeners(DriverConfig driverConfig, tcp:ConnectionService|
         HTTPConnectionService driverConnectionService)
@@ -26,6 +34,14 @@ public function initializeDriverListeners(DriverConfig driverConfig, tcp:Connect
     }
 }
 
+public function initializeDriverHttpClients(string? hubUrl, string? paymentNetworkUrl) returns error? {
+
+    if (hubUrl is string && paymentNetworkUrl is string) {
+        hubClient = check new (hubUrl);
+        paymentNetworkClient = check new (paymentNetworkUrl);
+    }
+}
+
 public function initializeDestinationDriverClients() returns error? {
 
     // ToDo: This should be called by a periodic scheduler
@@ -35,29 +51,48 @@ public function initializeDestinationDriverClients() returns error? {
         http:Client driverHttpClient = check new (metadata.paymentEndpoint);
         // Add the client to the map with countryCode as the key
         httpClientMap[metadata.countryCode] = driverHttpClient;
+        log:printInfo("Http client for the destination " + metadata.countryCode + " created");
     }
 }
 
-public function registerDriverAtHub(string driverName, string countryCode, string paymentsEndpoint) returns error? {
+public function registerDriverAtHub(string driverName, string countryCode, string paymentEndpoint) returns error? {
 
-    log:printInfo("Registering driver at payments hub.");
+    log:printInfo("Registering driver" + driverName + "at payments hub.");
     json registerResponse = check hubClient->/payments\-hub/register.post({
         driverName: driverName,
         countryCode: countryCode,
-        paymentsEndpoint: paymentsEndpoint
+        paymentEndpoint: paymentEndpoint
     });
 
     // ToDo: Add error handling and retry logic
-    log:printInfo("\nRegistration response from hub:" + registerResponse.toJsonString());
+    log:printInfo("\nRegistration response from hub: " + registerResponse.toJsonString());
 
 }
 
-public function sendToDestinationDriver(string countryCode, json data) returns json|error? {
-    // ToDo
+public function sendToDestinationDriver(string countryCode, json payload, string correlationId) returns json|error? {
+
+    http:Client? destinationClient = httpClientMap[countryCode];
+
+    if (destinationClient is http:Client) {
+        http:Request request = new;
+        request.setHeader("Content-Type", "application/json");
+        request.setHeader("X-Correlation-ID", correlationId);
+        request.setPayload(payload);
+        http:Response response = check destinationClient->/inbound\_payload.post(request);
+        return response.getJsonPayload();
+    } else {
+        log:printError("Http client for the destination " + countryCode + " not found");
+        return error("Http client for the destination not found");
+    }
 }
 
-public function sendToPaymentNetwork(json data) returns json|error? {
-    // ToDo
+public function sendToPaymentNetwork(json payload) returns json|error? {
+
+    http:Request request = new;
+    request.setHeader("Content-Type", "application/json");
+    request.setPayload(payload);
+    http:Response response = check paymentNetworkClient->/payment.post(request);
+    return response.getJsonPayload();
 }
 
 public function publishEvent(Event event) {
