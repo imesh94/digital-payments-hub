@@ -1,10 +1,6 @@
 [package]
 org = "digitalpaymentshub"
-<<<<<<< HEAD
 name = "drivers.lankapay"
-=======
-name = "digital.payments.hub.lankapay"
->>>>>>> fcd6571 (Rename util package)
 version = "0.0.1"
 distribution = "2201.10.0"
 
@@ -13,7 +9,6 @@ observabilityIncluded = true
 
 [[dependency]]
 org = "digitalpaymentshub"
-<<<<<<< HEAD
 name = "drivers.util"
 version = "0.0.9"
 repository = "local"
@@ -28,8 +23,4 @@ repository = "local"
 org = "ballerinax"
 name = "financial.iso20022"
 version = "0.0.4"
-=======
-name = "util"
-version = "0.0.7"
->>>>>>> fcd6571 (Rename util package)
 repository = "local"
