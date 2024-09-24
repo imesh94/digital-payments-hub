@@ -12,19 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-public type DriverConfig readonly & record {
-    string name;
-    string code;
-    InboundConfig inbound;
-    OutboundConfig outbound;
-};
+public type Metadata readonly & record {
 
-public type InboundConfig readonly & record {
-    string transport;
-    int port;
-};
-
-// Structure for the outbound configuration
-public type OutboundConfig readonly & record {
-    string baseUrl;
+    string driverName;
+    string countryCode;
+    string paymentEndpoint;
 };

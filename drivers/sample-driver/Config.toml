@@ -1,0 +1,14 @@
+[driver]
+name = "sample_driver"
+code = "SD1"
+[driver.inbound]
+transport = "tcp"
+port = 8085
+[driver.outbound]
+baseUrl = "http://localhost:9093"
+
+[payment_hub]
+baseUrl = "http://localhost:9090"
+
+[payment_network]
+baseUrl = "http://localhost:9590"
