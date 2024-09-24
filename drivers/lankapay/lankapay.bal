@@ -16,29 +16,12 @@ import ballerina/constraint;
 import ballerina/data.jsondata;
 import ballerina/http;
 import ballerina/log;
-import ballerina/uuid;
 
 import ballerinax/financial.iso8583;
 import ballerinax/financial.iso20022;
 
 import digitalpaymentshub/drivers.util;
-
-# Driver http client for internal hub communications.
-service http:InterceptableService / on new http:Listener(9090) {
-
-    # A receiving financial transactions from other drivers and handle the real transaction.
-    #
-    # + caller - http caller  
-    # + req - http request  
-    # - returns error if an error occurred
-    # + return - return value description
-    resource function post transact(http:Caller caller, http:Request req) returns error? {
-        // Todo - implement the logic
-    }
-    public function createInterceptors() returns http:Interceptor|http:Interceptor[] {
-        return new ResponseErrorInterceptor();
-    }
-}
+import ballerina/uuid;
 
 
 # Handles inbound transactions and return response.
@@ -52,11 +35,11 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
         log:printError("Error occurred while converting the byte array to string", dataString);
         return ("Error occurred while converting the byte array to string: " + dataString.message()).toBytes();
     }
-    string correlationId = uuid:createType4AsString();
 
-    //todo implement
-    util:publishEvent(event = {id: "", correlationId: "", eventType: util:RECEIVED_FROM_SOURCE, 
-        origin: "", destination: "", eventTimestamp: "", status: "", errorMessage: ""});
+    string correlationId = uuid:createType4AsString();
+    util:Event receivedEvent = util:createEvent(correlationId, util:RECEIVED_FROM_SOURCE, 
+        driver.code + "-network", driver.code + "-driver", "success", "N/A");
+    util:publishEvent(receivedEvent);
 
     byte[] response = [];
     // parse ISO 8583 message
@@ -91,27 +74,29 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
                                 + destinationCountryCode.message()).toBytes();
                         } else {
                             // send the transformed ISO 20022 message to the destination driver
-                            anydata|error destinationDriverResponse = util:sendToDestinationDriver(destinationCountryCode, 
-                                iso20022Msg);
-                            if (destinationDriverResponse is error) {
-                                log:printError("Error while sending message to destination driver: " 
-                                    + destinationDriverResponse.message());
-                                response = ("Error while sending message to destination driver: " 
-                                    + destinationDriverResponse.message()).toBytes();
-                            } else {
+                            util:Event sendingtoDestinationDriverEvent = 
+                                util:createEvent(correlationId, util:FORWARDING_TO_DESTINATION_DRIVER, 
+                                driver.code + "-driver", destinationCountryCode + "-driver", "success", "N/A");
+                            util:publishEvent(sendingtoDestinationDriverEvent);
+                            // todo - do we need this model?
+                            util:DestinationResponse|error destinationDriverResponse = 
+                                util:sendToDestinationDriver(destinationCountryCode, iso20022Msg.toJson(), 
+                                correlationId);
+                            util:Event receivedDestinationDriverResponseEvent = 
+                                util:createEvent(correlationId, util:RECEIVED_FROM_DESTINATION_DRIVER, 
+                                destinationCountryCode + "-driver", driver.code + "-driver", "success", "N/A");
+                            util:publishEvent(receivedDestinationDriverResponseEvent);
+
+                            if (destinationDriverResponse is util:DestinationResponse) {
                                 //transform response
                                 iso20022:FIToFIPmtStsRpt|error iso20022Response = 
-                                    constraint:validate(destinationDriverResponse);
+                                    constraint:validate(destinationDriverResponse.responsePayload);
                                 if (iso20022Response is error) {
                                     log:printError("Error while transforming response to ISO 20022: " 
                                         + iso20022Response.message());
                                     response = ("Error while transforming response to ISO 20022: " 
                                         + iso20022Response.message()).toBytes();
                                 } else {
-                                    //todo
-                                    util:publishEvent(event = {id: "", correlationId: "", 
-                                        eventType: util:RESPONDING_TO_SOURCE, origin: "", destination: "", 
-                                        eventTimestamp: "", status: "", errorMessage: ""});
                                     // transform to ISO 8583 MTI 0210
                                     iso8583:MTI_0210|error mti0210msg = transformPacs002toMTI0210(iso20022Response);
                                     if (mti0210msg is error) {
@@ -135,11 +120,21 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
                                                 response = ("Error occurred while encoding the ISO 8583 message: " 
                                                     + iso8583Msg.message).toBytes();
                                             } else {
+                                                util:Event respondingtoSourceEvenet = 
+                                                    util:createEvent(correlationId, util:RESPONDING_TO_SOURCE,
+                                                    driver.code + "-driver", driver.code + "-network", "success", 
+                                                    "N/A");
+                                                util:publishEvent(respondingtoSourceEvenet);
                                                 response = iso8583Msg.toBytes();
                                             }
                                         }
                                     }
                                 }
+                            } else if (destinationDriverResponse is error) {
+                                log:printError("Error while sending message to destination driver: " 
+                                    + destinationDriverResponse.message());
+                                response = ("Error while sending message to destination driver: " 
+                                    + destinationDriverResponse.message()).toBytes();
                             }
                         }
                     }

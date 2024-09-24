@@ -19,6 +19,7 @@ import ballerina/random;
 import ballerina/time;
 
 import ballerinax/financial.iso20022;
+import ballerina/http;
 
 isolated function isProxyRequest(iso20022:SplmtryData[]? supplementaryData) returns boolean {
 
@@ -83,4 +84,19 @@ isolated function getCurrentDateTime() returns string|error {
         + regexp:split(seperator, civilDateTime.second.toString())[0].padZero(2) + "."
         + regexp:split(seperator, civilDateTime.second.toString())[1].padZero(3);
 
+}
+
+
+public isolated service class ResponseErrorInterceptor {
+    *http:ResponseErrorInterceptor;
+    remote isolated function interceptResponseError(error err) returns http:BadRequest {
+        // In this case, all the errors are sent as `400 BadRequest` responses with a customized
+        // media type and body. Moreover, you can send different status code responses according to
+        // the error type.        
+        return {
+            mediaType: "application/json",
+            // todo - use camt029 
+            body: {message: err.message()}
+        };
+    }
 }
