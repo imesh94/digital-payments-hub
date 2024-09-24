@@ -16,6 +16,8 @@ import ballerina/http;
 import ballerina/lang.runtime;
 import ballerina/log;
 import ballerina/tcp;
+import ballerina/time;
+import ballerina/uuid;
 
 http:Client hubClient = check new ("localhost:9090"); //ToDo: Remove
 http:Client paymentNetworkClient = check new ("localhost:9092"); //ToDo: Remove
@@ -69,7 +71,8 @@ public function registerDriverAtHub(string driverName, string countryCode, strin
 
 }
 
-public function sendToDestinationDriver(string countryCode, json payload, string correlationId) returns json|error? {
+public function sendToDestinationDriver(string countryCode, json payload, string correlationId) returns
+    DestinationResponse|error? {
 
     http:Client? destinationClient = httpClientMap[countryCode];
 
@@ -79,11 +82,30 @@ public function sendToDestinationDriver(string countryCode, json payload, string
         request.setHeader("X-Correlation-ID", correlationId);
         request.setPayload(payload);
         http:Response response = check destinationClient->/inbound\_payload.post(request);
-        return response.getJsonPayload();
+
+        int responseStatusCode = response.statusCode;
+        string|http:HeaderNotFoundError responseCorrelationId = response.getHeader("X-Correlation-ID");
+        json|http:ClientError responsePayload = response.getJsonPayload();
+
+        if (responseStatusCode == 200 && responseCorrelationId is string && responsePayload is json) {
+            DestinationResponse destinationResponse = {
+                correlationId: responseCorrelationId,
+                responsePayload: responsePayload
+            };
+            return destinationResponse;
+        } else if (responseCorrelationId is string && responsePayload is json) {
+            log:printError("Error returned from the destination driver");
+            return error(responsePayload.toString() + " CorrelationID: " + correlationId);
+        } else if (responsePayload is error) {
+            log:printError("Error occurred while forwarding request to the destination driver");
+            return responsePayload;
+        }
     } else {
-        log:printError("Http client for the destination " + countryCode + " not found");
-        return error("Http client for the destination not found");
+        string errorMessage = "Http client for the destination " + countryCode + " not found";
+        log:printError(errorMessage);
+        return error(errorMessage);
     }
+    return;
 }
 
 public function sendToPaymentNetwork(json payload) returns json|error? {
@@ -104,6 +126,27 @@ public function publishEvent(Event event) {
     } else {
         log:printInfo("\n Event published:" + event.toJsonString());
     }
+}
+
+public function createEvent(string correlationId, EventType eventType, string origin, string destination,
+        string status, string errorMessage) returns Event {
+
+    time:Utc utc = time:utcNow();
+    string currentTimestamp = time:utcToString(utc);
+    string id = uuid:createType4AsString();
+
+    Event event = {
+        id: id,
+        correlationId: correlationId,
+        eventType: eventType,
+        origin: origin,
+        destination: destination,
+        eventTimestamp: currentTimestamp,
+        status: status,
+        errorMessage: errorMessage
+    };
+
+    return event;
 }
 
 function getdriverMetadataFromHub() returns Metadata[]|error {

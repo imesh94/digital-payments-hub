@@ -36,8 +36,15 @@ public service class DriverTCPConnectionService {
 
         // Send to destination driver
         log:printInfo("Forwarding request to destination driver");
-        json destinationResponse = check util:sendToDestinationDriver("MY", sampleJson, "correlation-id");
-        log:printInfo("Response received from destination driver: " + destinationResponse.toString());
+        util:DestinationResponse|error? destinationResponse = check util:sendToDestinationDriver(
+                "MY", sampleJson, "correlation-id");
+        if (destinationResponse is util:DestinationResponse) {
+            log:printInfo(
+                    "Response received from destination driver: " + destinationResponse.responsePayload.toString() +
+                    " CorrelationId: " + destinationResponse.correlationId);
+        } else {
+            log:printError("Error occurred while getting response from the destination driver", destinationResponse);
+        }
 
         // Convert response to iso8583
 
