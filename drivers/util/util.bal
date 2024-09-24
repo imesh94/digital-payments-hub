@@ -20,7 +20,7 @@ import ballerina/time;
 import ballerina/uuid;
 
 http:Client hubClient = check new ("localhost:9090"); //ToDo: Remove
-http:Client paymentNetworkClient = check new ("localhost:9092"); //ToDo: Remove
+public http:Client paymentNetworkClient = check new ("localhost:9092"); //ToDo: Remove
 map<http:Client> httpClientMap = {};
 
 public function initializeDriverListeners(DriverConfig driverConfig, tcp:ConnectionService|
@@ -59,7 +59,7 @@ public function initializeDestinationDriverClients() returns error? {
 
 public function registerDriverAtHub(string driverName, string countryCode, string paymentEndpoint) returns error? {
 
-    log:printInfo("Registering driver" + driverName + "at payments hub.");
+    log:printInfo("Registering driver " + driverName + " at payments hub."); // todo - do we need paymentEndpoint??
     json registerResponse = check hubClient->/payments\-hub/register.post({
         driverName: driverName,
         countryCode: countryCode,
@@ -72,7 +72,7 @@ public function registerDriverAtHub(string driverName, string countryCode, strin
 }
 
 public function sendToDestinationDriver(string countryCode, json payload, string correlationId) returns
-    DestinationResponse|error? {
+    DestinationResponse|error {
 
     http:Client? destinationClient = httpClientMap[countryCode];
 
@@ -81,19 +81,20 @@ public function sendToDestinationDriver(string countryCode, json payload, string
         request.setHeader("Content-Type", "application/json");
         request.setHeader("X-Correlation-ID", correlationId);
         request.setPayload(payload);
-        http:Response response = check destinationClient->/inbound\_payload.post(request);
+        http:Response response = check destinationClient->/transact.post(request);
 
         int responseStatusCode = response.statusCode;
-        string|http:HeaderNotFoundError responseCorrelationId = response.getHeader("X-Correlation-ID");
+        // string|http:HeaderNotFoundError responseCorrelationId = response.getHeader("X-Correlation-ID");
         json|http:ClientError responsePayload = response.getJsonPayload();
 
-        if (responseStatusCode == 200 && responseCorrelationId is string && responsePayload is json) {
+        // if (responseStatusCode == 200 && responseCorrelationId is string && responsePayload is json) {
+        if (responseStatusCode == 200 && responsePayload is json) {
             DestinationResponse destinationResponse = {
-                correlationId: responseCorrelationId,
+                correlationId: correlationId,
                 responsePayload: responsePayload
             };
             return destinationResponse;
-        } else if (responseCorrelationId is string && responsePayload is json) {
+        } else if (responsePayload is json) {
             log:printError("Error returned from the destination driver");
             return error(responsePayload.toString() + " CorrelationID: " + correlationId);
         } else if (responsePayload is error) {
@@ -105,7 +106,6 @@ public function sendToDestinationDriver(string countryCode, json payload, string
         log:printError(errorMessage);
         return error(errorMessage);
     }
-    return;
 }
 
 public function sendToPaymentNetwork(json payload) returns json|error? {
@@ -195,5 +195,5 @@ public function initiateNewHTTPListener(DriverConfig driver, HTTPConnectionServi
 # Represent HTTP Listener ConnectionService service type.
 public type HTTPConnectionService distinct service object {
 
-    function onRequest(http:Caller caller, http:Request req) returns error?;
+    public function onRequest(http:Caller caller, http:Request req) returns error?;
 };
