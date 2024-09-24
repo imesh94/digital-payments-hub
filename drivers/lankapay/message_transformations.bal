@@ -96,6 +96,17 @@ function transformPacs002toMTI0210(iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt) ret
     SystemTraceAuditNumber: fiToFiPmtStsRpt.TxInfAndSts?.OrgnlTxRef?.PmtId?.EndToEndId ?: ""
 };
 
+function transformMTI0800toMTI0810(iso8583:MTI_0800 mti0800) returns iso8583:MTI_0810 => {
+    MTI: "810",
+    TransmissionDateTime: mti0800.TransmissionDateTime,
+    SystemTraceAuditNumber: mti0800.SystemTraceAuditNumber,
+    SettlementDate: mti0800.SettlementDate,
+    AcquiringInstitutionIdentificationCode: mti0800.AcquiringInstitutionIdentificationCode,
+    AdditionalDataPrivate: mti0800.AdditionalDataPrivate,
+    NetworkManagementInformationCode: mti0800.NetworkManagementInformationCode,
+    NetworkManagementInformationChannelType: mti0800.NetworkManagementInformationChannelType,
+    ResponseCode: "00"
+};
 
 # Map the fields that cannot be directly mapped to ISO 20022 field to the supplementary data element.
 #

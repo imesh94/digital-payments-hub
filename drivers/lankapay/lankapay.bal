@@ -143,6 +143,30 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
                     response = ("Error while validating: " + validatedMsg.toBalString()).toBytes();
                 }
             }
+            TYPE_MTI_0800 => {
+                log:printInfo("MTI 0800 message received");
+                iso8583:MTI_0800|error validatedMsg = constraint:validate(parsedISO8583Msg);
+                if (validatedMsg  is error) {
+                    log:printError("Error while validating incoming message: " + validatedMsg.message());
+                    response = ("Error while validating: " + validatedMsg.toBalString()).toBytes();
+                } else {
+                    iso8583:MTI_0810 responseMsg = transformMTI0800toMTI0810(validatedMsg);
+                    string|iso8583:ISOError encodedMsg = iso8583:encode(responseMsg);
+                    if (encodedMsg is iso8583:ISOError) {
+                        log:printError("Error occurred while encoding the ISO 8583 message", 
+                            err = encodedMsg);
+                        response = ("Error occurred while encoding the ISO 8583 message: " 
+                            + encodedMsg.message).toBytes();
+                    } else {
+                        util:Event respondingtoSourceEvenet = 
+                            util:createEvent(correlationId, util:RESPONDING_TO_SOURCE,
+                            driver.code + "-driver", driver.code + "-network", "success", 
+                            "N/A");
+                        util:publishEvent(respondingtoSourceEvenet);
+                        response = encodedMsg.toBytes();
+                    }
+                }  
+            }
             _ => {
                 log:printError("MTI is not supported");
                 response = ("MTI is not supported").toBytes();
