@@ -62,7 +62,8 @@ public function initializeDriverHttpClients(string? hubUrl, string? paymentNetwo
 # + return - error
 public function initializeDestinationDriverClients() returns error? {
 
-    task:JobId id = check task:scheduleJobRecurByFrequency(new DestinationClientInitializationJob(), 10);
+    //ToDo : Make the periodic interval configurable
+    task:JobId id = check task:scheduleJobRecurByFrequency(new DestinationClientInitializationJob(), 60);
     log:printInfo("Started DestinationClientInitializationJob with job id: " + id.toString());
 }
 
