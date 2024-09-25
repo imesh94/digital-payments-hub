@@ -1,0 +1,17 @@
+[driver]
+name = "lankapay"
+code = "MY"
+[driver.inbound]
+transport = "http"
+port = 8087
+[driver.outbound]
+baseUrl = "http://localhost:9105"
+host = "localhost"
+port = 9100
+
+[payment_hub]
+baseUrl = "http://localhost:9090"
+
+[payment_network]
+#baseUrl = "tcp://localhost:9200"
+baseUrl = "http://localhost:9301"
