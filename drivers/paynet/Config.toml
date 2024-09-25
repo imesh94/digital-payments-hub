@@ -1,5 +1,5 @@
 [driver]
-name = "lankapay"
+name = "paynet"
 code = "MY"
 [driver.inbound]
 transport = "http"
