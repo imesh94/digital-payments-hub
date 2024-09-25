@@ -67,7 +67,6 @@ public type Acct record {|
     Tp Tp?;
 |};
 
-
 public type DebtrAcct record {|
     *Acct;
     string Nm?;
@@ -150,4 +149,6 @@ public type Regn record {|
     Agt Agt;
     DebtrAcct Acct;
     string PreAuthrsd;
+|};
+ string PreAuthrsd;
 |};
