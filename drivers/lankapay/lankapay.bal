@@ -1,41 +1,45 @@
+// Copyright 2024 [name of copyright owner]
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 import ballerina/constraint;
+import ballerina/data.jsondata;
 import ballerina/http;
 import ballerina/log;
-import ballerina/uuid;
 
 import ballerinax/financial.iso8583;
 import ballerinax/financial.iso20022;
 
 import digitalpaymentshub/drivers.util;
-import ballerina/data.jsondata;
+import ballerina/uuid;
 
-# A service representing a network-accessible API
-# bound to port `9090`.
-service http:InterceptableService / on new http:Listener(9090) {
 
-    # A resource for generating greetings
-    # + name - name as a string or nil
-    # + return - string name with hello message or error
-    resource function get greeting(string? name) returns string|error {
-        // Send a response back to the caller.
-        if name is () {
-            return error("name should not be empty!");
-        }
-        return string `Hello, ${name}`;
+# Handles inbound transactions and return response.
+#
+# + data - byte array of the incoming message
+# + return - byte array of the response message
+public function handleInbound(byte[] & readonly data) returns byte[] {
+
+    string|error dataString = string:fromBytes(data);
+    if (dataString is error) {
+        log:printError("Error occurred while converting the byte array to string", dataString);
+        return ("Error occurred while converting the byte array to string: " + dataString.message()).toBytes();
     }
-    public function createInterceptors() returns http:Interceptor|http:Interceptor[] {
-        return new util:ResponseErrorInterceptor();
-    }
-}
 
-
-public function handleInbound(byte[] & readonly data) returns byte[]|error {
-
-    string dataString = check string:fromBytes(data);
     string correlationId = uuid:createType4AsString();
-
-    util:publishEvent("RECEIVED_FROM_SOURCE", driver.name, "DRIVER_MANAGER", correlationId);
+    util:Event receivedEvent = util:createEvent(correlationId, util:RECEIVED_FROM_SOURCE, 
+        driver.code + "-network", driver.code + "-driver", "success", "N/A");
+    util:publishEvent(receivedEvent);
 
     byte[] response = [];
     // parse ISO 8583 message
@@ -70,37 +74,67 @@ public function handleInbound(byte[] & readonly data) returns byte[]|error {
                                 + destinationCountryCode.message()).toBytes();
                         } else {
                             // send the transformed ISO 20022 message to the destination driver
-                            anydata destinationDriverResponse = util:sendToDestinationDriver(iso20022Msg);
-                            //transform response
-                            iso20022:FIToFIPmtStsRpt|error iso20022Response = 
-                                constraint:validate(destinationDriverResponse);
-                            if (iso20022Response is error) {
-                                log:printError("Error while transforming response to ISO 20022: " 
-                                    + iso20022Response.message());
-                                response = ("Error while transforming response to ISO 20022: " 
-                                    + iso20022Response.message()).toBytes();
-                            } else {
-                                util:publishEvent("SENT_TO_DESTINATION", driver.name, "DRIVER_MANAGER", correlationId);
-                                // transform to ISO 8583 MTO 0210
-                                iso8583:MTI_0210|error mti0210msg = transformPacs002toMTI0210(iso20022Response);
-                                if (mti0210msg is error) {
-                                    log:printError("Error while transforming to ISO 8583 MTI 0210: " 
-                                        + mti0210msg.message());
-                                    response = ("Error while transforming to ISO 8583 MTI 0210: " 
-                                        + mti0210msg.message()).toBytes();
-                                } else {
-                                    json jsonMsg = check jsondata:toJson(mti0210msg);
-                                    string|iso8583:ISOError iso8583Msg = iso8583:encode(jsonMsg);
-                                    if (iso8583Msg is iso8583:ISOError) {
-                                        log:printError("Error occurred while encoding the ISO 8583 message", 
-                                            err = iso8583Msg);
-                                        response = ("Error occurred while encoding the ISO 8583 message: " 
-                                            + iso8583Msg.message).toBytes();
-                                    } else {
-                                        response = iso8583Msg.toBytes();
-                                    }
+                            util:Event sendingtoDestinationDriverEvent = 
+                                util:createEvent(correlationId, util:FORWARDING_TO_DESTINATION_DRIVER, 
+                                driver.code + "-driver", destinationCountryCode + "-driver", "success", "N/A");
+                            util:publishEvent(sendingtoDestinationDriverEvent);
+                            // todo - do we need this model?
+                            util:DestinationResponse|error destinationDriverResponse = 
+                                util:sendToDestinationDriver(destinationCountryCode, iso20022Msg.toJson(), 
+                                correlationId);
+                            util:Event receivedDestinationDriverResponseEvent = 
+                                util:createEvent(correlationId, util:RECEIVED_FROM_DESTINATION_DRIVER, 
+                                destinationCountryCode + "-driver", driver.code + "-driver", "success", "N/A");
+                            util:publishEvent(receivedDestinationDriverResponseEvent);
 
+                            if (destinationDriverResponse is util:DestinationResponse) {
+                                //transform response
+                                iso20022:FIToFIPmtStsRpt|error iso20022Response = 
+                                    constraint:validate(destinationDriverResponse.responsePayload);
+                                if (iso20022Response is error) {
+                                    log:printError("Error while transforming response to ISO 20022: " 
+                                        + iso20022Response.message());
+                                    response = ("Error while transforming response to ISO 20022: " 
+                                        + iso20022Response.message()).toBytes();
+                                } else {
+                                    // transform to ISO 8583 MTI 0210
+                                    iso8583:MTI_0210|error mti0210msg = transformPacs002toMTI0210(iso20022Response);
+                                    if (mti0210msg is error) {
+                                        log:printError("Error while transforming to ISO 8583 MTI 0210: " 
+                                            + mti0210msg.message());
+                                        response = ("Error while transforming to ISO 8583 MTI 0210: " 
+                                            + mti0210msg.message()).toBytes();
+                                    } else {
+                                        json|error jsonMsg = jsondata:toJson(mti0210msg);
+                                        if (jsonMsg is error) {
+                                            log:printError("Error occurred while converting the ISO 8583 message to JSON", 
+                                                err = jsonMsg.message());
+                                            response = ("Error occurred while converting the ISO 8583 message to JSON: " 
+                                                + jsonMsg.message()).toBytes();
+                                        } else {
+                                            // transform to ISO 8583 message
+                                            string|iso8583:ISOError iso8583Msg = iso8583:encode(jsonMsg);
+                                            if (iso8583Msg is iso8583:ISOError) {
+                                                log:printError("Error occurred while encoding the ISO 8583 message", 
+                                                    err = iso8583Msg);
+                                                response = ("Error occurred while encoding the ISO 8583 message: " 
+                                                    + iso8583Msg.message).toBytes();
+                                            } else {
+                                                util:Event respondingtoSourceEvenet = 
+                                                    util:createEvent(correlationId, util:RESPONDING_TO_SOURCE,
+                                                    driver.code + "-driver", driver.code + "-network", "success", 
+                                                    "N/A");
+                                                util:publishEvent(respondingtoSourceEvenet);
+                                                response = iso8583Msg.toBytes();
+                                            }
+                                        }
+                                    }
                                 }
+                            } else if (destinationDriverResponse is error) {
+                                log:printError("Error while sending message to destination driver: " 
+                                    + destinationDriverResponse.message());
+                                response = ("Error while sending message to destination driver: " 
+                                    + destinationDriverResponse.message()).toBytes();
                             }
                         }
                     }
@@ -108,6 +142,30 @@ public function handleInbound(byte[] & readonly data) returns byte[]|error {
                     log:printError("Error while validating incoming message: " + validatedMsg.message());
                     response = ("Error while validating: " + validatedMsg.toBalString()).toBytes();
                 }
+            }
+            TYPE_MTI_0800 => {
+                log:printInfo("MTI 0800 message received");
+                iso8583:MTI_0800|error validatedMsg = constraint:validate(parsedISO8583Msg);
+                if (validatedMsg  is error) {
+                    log:printError("Error while validating incoming message: " + validatedMsg.message());
+                    response = ("Error while validating: " + validatedMsg.toBalString()).toBytes();
+                } else {
+                    iso8583:MTI_0810 responseMsg = transformMTI0800toMTI0810(validatedMsg);
+                    string|iso8583:ISOError encodedMsg = iso8583:encode(responseMsg);
+                    if (encodedMsg is iso8583:ISOError) {
+                        log:printError("Error occurred while encoding the ISO 8583 message", 
+                            err = encodedMsg);
+                        response = ("Error occurred while encoding the ISO 8583 message: " 
+                            + encodedMsg.message).toBytes();
+                    } else {
+                        util:Event respondingtoSourceEvenet = 
+                            util:createEvent(correlationId, util:RESPONDING_TO_SOURCE,
+                            driver.code + "-driver", driver.code + "-network", "success", 
+                            "N/A");
+                        util:publishEvent(respondingtoSourceEvenet);
+                        response = encodedMsg.toBytes();
+                    }
+                }  
             }
             _ => {
                 log:printError("MTI is not supported");
@@ -118,4 +176,11 @@ public function handleInbound(byte[] & readonly data) returns byte[]|error {
     return response;
 };
 
-
+# Handles outbound transactions.
+#
+# + payload - iso 20022 json payload
+# + return - http response
+public function handleOutbound(json payload) returns http:Response {
+    // Todo - implement the logic
+    return new;
+};

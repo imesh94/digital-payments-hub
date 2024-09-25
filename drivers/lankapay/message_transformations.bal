@@ -1,9 +1,24 @@
+// Copyright 2024 [name of copyright owner]
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import ballerina/lang.'decimal as decimal;
+import ballerina/lang.regexp;
+import ballerina/log;
+import ballerina/time;
+
 import ballerinax/financial.iso20022;
 import ballerinax/financial.iso8583;
-import ballerina/lang.'decimal as decimal;
-import ballerina/log;
-import ballerina/lang.regexp;
-import ballerina/time;
 
 final string:RegExp seperator = re `.`;
 
@@ -78,10 +93,20 @@ function transformPacs002toMTI0210(iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt) ret
     ReceivingInstitutionIdentificationCode: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmAcct?.Id?.Othr?.Id ?: "",
     SettlementDate: check getDate(fiToFiPmtStsRpt.GrpHdr.CreDtTm),
     ResponseCode: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmAcct?.Id?.Othr?.Id ?: "",
-    SystemTraceAuditNumber: fiToFiPmtStsRpt.OrgnlGrpInfAndSts?.OrgnlMsgId ?: ""
+    SystemTraceAuditNumber: fiToFiPmtStsRpt.TxInfAndSts?.OrgnlTxRef?.PmtId?.EndToEndId ?: ""
 };
 
-
+function transformMTI0800toMTI0810(iso8583:MTI_0800 mti0800) returns iso8583:MTI_0810 => {
+    MTI: "810",
+    TransmissionDateTime: mti0800.TransmissionDateTime,
+    SystemTraceAuditNumber: mti0800.SystemTraceAuditNumber,
+    SettlementDate: mti0800.SettlementDate,
+    AcquiringInstitutionIdentificationCode: mti0800.AcquiringInstitutionIdentificationCode,
+    AdditionalDataPrivate: mti0800.AdditionalDataPrivate,
+    NetworkManagementInformationCode: mti0800.NetworkManagementInformationCode,
+    NetworkManagementInformationChannelType: mti0800.NetworkManagementInformationChannelType,
+    ResponseCode: "00"
+};
 
 # Map the fields that cannot be directly mapped to ISO 20022 field to the supplementary data element.
 #
@@ -178,13 +203,13 @@ function parseField120(string field120) returns map<string> {
     map<string> field120Parts = {};
     int i = 0;
     while i < field120.length() {
-        if (i + 6 >= field120.length()) {
+        if (i + 6 > field120.length()) {
             log:printError("Error while parsing field 120: Field length is not enough to parse the next element");
             break;
         }
         string tagId = field120.substring(i, i + 3);
         int elementLength = check int:fromString(field120.substring(i + 3, i + 6));
-        if (i + 6 + elementLength >= field120.length()) {
+        if (i + 6 + elementLength > field120.length()) {
             log:printError("Error while parsing field 120: Field length is not enough to parse the next element");
             break;
         }

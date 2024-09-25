@@ -1,11 +1,26 @@
+// Copyright 2024 [name of copyright owner]
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import ballerina/http;
 import ballerina/time;
 import ballerina/data.jsondata;
 import yPayNetwork.models;
+import ballerina/log;
 
 # A service representing a network-accessible API
 # bound to port `9090`.
-service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9091) {
+service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
 
     # Inbound endpoint of LanakPay ISO 8583 messages.
     #
@@ -16,6 +31,8 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9091) {
         returns error? {
 
         string xBusinessMsgId = check req.getHeader("X-Business-Message-Id");
+        log:printInfo("Received a resolution request for proxy: " + proxy + " of type: " + proxyType + 
+            " with business message ID: " + xBusinessMsgId);
         time:Utc utcTime = time:utcNow();
         string utcString = time:utcToString(utcTime);
         
@@ -82,6 +99,7 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9091) {
     isolated resource function post register(http:Caller caller, http:Request req) returns error? {
         
         json payload = check req.getJsonPayload();
+        log:printInfo("Received a registration request with payload: " + payload.toString());
         models:fundTransfer fundTransferPayload = check jsondata:parseAsType(payload);
         string xBusinessMsgId = check req.getHeader("X-Business-Message-Id");
         models:fundTransferResponse response = {

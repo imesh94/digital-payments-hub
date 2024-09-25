@@ -5,4 +5,13 @@ code = "LK"
 transport = "tcp"
 port = 8085
 [driver.outbound]
-baseUrl = "http://localhost:9093"
+baseUrl = "http://localhost:9100"
+host = "localhost"
+port = 9100
+
+[payment_hub]
+baseUrl = "http://localhost:9090"
+
+[payment_network]
+#baseUrl = "tcp://localhost:9200"
+baseUrl = "http://localhost:9300"
