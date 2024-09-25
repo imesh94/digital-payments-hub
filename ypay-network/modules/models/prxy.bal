@@ -152,6 +152,3 @@ public type Regn record {|
     DebtrAcct Acct;
     string PreAuthrsd;
 |};
-
-string PreAuthrsd;
-|};
