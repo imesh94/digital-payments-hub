@@ -17,6 +17,7 @@
 import ballerina/http;
 import ballerina/lang.runtime;
 import ballerina/log;
+import ballerina/task;
 import ballerina/tcp;
 import ballerina/time;
 import ballerina/uuid;
@@ -24,7 +25,13 @@ import ballerina/uuid;
 http:Client hubClient = check new ("localhost:9090"); //ToDo: Remove
 public http:Client paymentNetworkClient = check new ("localhost:9092"); //ToDo: Remove
 map<http:Client> httpClientMap = {};
+Metadata[] metadataList = [];
 
+# Initialize http/tcp listeners for the driver based on configurations.
+#
+# + driverConfig - driver configurations 
+# + driverConnectionService - http/tcp connection service
+# + return - error
 public function initializeDriverListeners(DriverConfig driverConfig, tcp:ConnectionService|
         HTTPConnectionService driverConnectionService)
     returns error? {
@@ -38,6 +45,11 @@ public function initializeDriverListeners(DriverConfig driverConfig, tcp:Connect
     }
 }
 
+# Initialize http clients to communicate with the payments hub and payment network.
+#
+# + hubUrl - url of the payments hub  
+# + paymentNetworkUrl - url of the payment network
+# + return - error
 public function initializeDriverHttpClients(string? hubUrl, string? paymentNetworkUrl) returns error? {
 
     if (hubUrl is string && paymentNetworkUrl is string) {
@@ -46,22 +58,23 @@ public function initializeDriverHttpClients(string? hubUrl, string? paymentNetwo
     }
 }
 
+# Start scheduled job for initializing http clients to communicate with destination drivers.
+# + return - error
 public function initializeDestinationDriverClients() returns error? {
 
-    // ToDo: This should be called by a periodic scheduler
-    Metadata[] metadataList = check getdriverMetadataFromHub();
-
-    foreach var metadata in metadataList {
-        http:Client driverHttpClient = check new (metadata.paymentEndpoint);
-        // Add the client to the map with countryCode as the key
-        httpClientMap[metadata.countryCode] = driverHttpClient;
-        log:printInfo("Http client for the destination " + metadata.countryCode + " created");
-    }
+    task:JobId id = check task:scheduleJobRecurByFrequency(new DestinationClientInitializationJob(), 10);
+    log:printInfo("Started DestinationClientInitializationJob with job id: " + id.toString());
 }
 
+# Register driver at payments hub.
+#
+# + driverName - name of the driver  
+# + countryCode - country code of the driver  
+# + paymentEndpoint - payments endpoint which can be called by source drivers
+# + return - error
 public function registerDriverAtHub(string driverName, string countryCode, string paymentEndpoint) returns error? {
 
-    log:printInfo("Registering driver " + driverName + " at payments hub."); // todo - do we need paymentEndpoint??
+    log:printInfo("Registering driver " + driverName + " at payments hub.");
     json registerResponse = check hubClient->/payments\-hub/register.post({
         driverName: driverName,
         countryCode: countryCode,
@@ -73,6 +86,12 @@ public function registerDriverAtHub(string driverName, string countryCode, strin
 
 }
 
+# Send message to another driver.
+#
+# + countryCode - country code of the destination driver  
+# + payload - request payload  
+# + correlationId - correlation-id to track the transaction
+# + return - response from the destination driver | error
 public function sendToDestinationDriver(string countryCode, json payload, string correlationId) returns
     DestinationResponse|error {
 
@@ -110,6 +129,10 @@ public function sendToDestinationDriver(string countryCode, json payload, string
     }
 }
 
+# Send request to the payment network.
+#
+# + payload - request payload
+# + return - response as a json | error
 public function sendToPaymentNetwork(json payload) returns json|error? {
 
     http:Request request = new;
@@ -119,6 +142,9 @@ public function sendToPaymentNetwork(json payload) returns json|error? {
     return response.getJsonPayload();
 }
 
+# Publish event related to the transaction.
+#
+# + event - populated event object
 public function publishEvent(Event event) {
 
     log:printInfo("Publishing event to payments hub.");
@@ -130,6 +156,15 @@ public function publishEvent(Event event) {
     }
 }
 
+# Get a populated event object with given parameters.
+#
+# + correlationId - correlation-id to track the transaction
+# + eventType - type of the event. can be one of given 8 event types  
+# + origin - origin of the message  
+# + destination - destination of the message  
+# + status - current status of the transaction  
+# + errorMessage - error message if available
+# + return - populated event object
 public function createEvent(string correlationId, EventType eventType, string origin, string destination,
         string status, string errorMessage) returns Event {
 
@@ -151,6 +186,9 @@ public function createEvent(string correlationId, EventType eventType, string or
     return event;
 }
 
+# Get metadata of the registered drivers at payments hub.
+#
+# + return - driver metadata | error
 function getdriverMetadataFromHub() returns Metadata[]|error {
 
     Metadata[]|http:ClientError metadataList = hubClient->get("/payments-hub/metadata");
@@ -162,6 +200,11 @@ function getdriverMetadataFromHub() returns Metadata[]|error {
     return metadataList;
 }
 
+# Initiate a new TCP listener with the given connection service.
+#
+# + driver - configurations of the driver
+# + driverTCPConnectionService - customized tcp connection service of the driver
+# + return - error
 function initiateNewTCPListener(DriverConfig driver, tcp:ConnectionService driverTCPConnectionService) returns error? {
 
     tcp:Listener tcpListener = check new tcp:Listener(driver.inbound.port);
@@ -177,7 +220,12 @@ function initiateNewTCPListener(DriverConfig driver, tcp:ConnectionService drive
     log:printInfo("Started " + driver.name + " TCP listener on port: " + driver.inbound.port.toString());
 };
 
-public function initiateNewHTTPListener(DriverConfig driver, HTTPConnectionService driverHTTPConnectionService)
+# Initiate a new HTTP listener with the given connection service.
+#
+# + driver - configurations of the driver
+# + driverHTTPConnectionService - customized http connection service of the driver
+# + return - error
+function initiateNewHTTPListener(DriverConfig driver, HTTPConnectionService driverHTTPConnectionService)
     returns error? {
 
     http:Listener httpListener = check new http:Listener(driver.inbound.port);
@@ -199,3 +247,40 @@ public type HTTPConnectionService distinct service object {
 
     public function onRequest(http:Caller caller, http:Request req) returns error?;
 };
+
+# Perioic job to initialize http clients to communicate with destination drivers.
+# This job will only initialize http clients if there are any new drivers registered
+# at the payments hub
+class DestinationClientInitializationJob {
+    *task:Job;
+
+    public function execute() {
+
+        Metadata[]|error newMetadataList = getdriverMetadataFromHub();
+
+        if (newMetadataList is Metadata[]) {
+            if (metadataList == newMetadataList) {
+                log:printDebug("No change in cached destination driver metadata. " +
+                        "No requirement to create new http clients.");
+                return;
+            }
+            log:printInfo("Creating http clients for destination drivers.");
+            metadataList = newMetadataList;
+            httpClientMap.removeAll();
+            foreach var metadata in metadataList {
+                string countryCode = metadata.countryCode;
+                http:Client|error destinationHttpClient = new (metadata.paymentEndpoint);
+                // Add the client to the map with countryCode as the key
+                if (destinationHttpClient is http:Client) {
+                    httpClientMap[countryCode] = destinationHttpClient;
+                    log:printInfo("Http client for the destination " + countryCode + " created");
+                } else {
+                    log:printError("Error occurred while creating destination http client.",
+                            destinationHttpClient);
+                }
+            }
+        } else {
+            log:printError("Error occurred while getting metadata of drivers from payment hub.", newMetadataList);
+        }
+    }
+}
