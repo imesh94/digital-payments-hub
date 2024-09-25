@@ -1,11 +1,10 @@
 [driver]
-name = "paynet"
-code = "MY"
+name = "xpay"
+code = "LK"
 [driver.inbound]
-transport = "http"
-port = 8087
+transport = "tcp"
+port = 8085
 [driver.outbound]
-baseUrl = "http://localhost:9105"
 host = "localhost"
 port = 9100
 
@@ -14,4 +13,4 @@ baseUrl = "http://localhost:9090"
 
 [payment_network]
 #baseUrl = "tcp://localhost:9200"
-baseUrl = "http://localhost:9301"
+baseUrl = "http://localhost:9300"

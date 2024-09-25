@@ -1,15 +1,15 @@
 [driver]
-name = "sample_driver"
-code = "SD1"
+name = "ypay"
+code = "MY"
 [driver.inbound]
-transport = "tcp"
-port = 8085
+transport = "http"
+port = 8100
 [driver.outbound]
 host = "localhost"
-port = 9093
+port = 9101
 
 [payment_hub]
 baseUrl = "http://localhost:9090"
 
 [payment_network]
-baseUrl = "http://localhost:9590"
+baseUrl = "http://localhost:9301"

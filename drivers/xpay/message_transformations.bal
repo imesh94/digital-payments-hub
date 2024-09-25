@@ -1,16 +1,18 @@
-// Copyright 2024 [name of copyright owner]
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
+// Copyright (c) 2024 WSO2 LLC. (https://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
 // You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
 import ballerina/lang.'decimal as decimal;
 import ballerina/lang.regexp;
@@ -84,7 +86,7 @@ function transformPacs002toMTI0210(iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt) ret
     CurrencyCodeTransaction: fiToFiPmtStsRpt.GrpHdr.TtlIntrBkSttlmAmt?.Ccy ?: "",
     DateCapture: check getDate(fiToFiPmtStsRpt.GrpHdr.CreDtTm),
     LocalTransactionTime: check getTime(fiToFiPmtStsRpt.GrpHdr.CreDtTm),
-    LocalTransactionDate: check  getDate(fiToFiPmtStsRpt.GrpHdr.CreDtTm),
+    LocalTransactionDate: check getDate(fiToFiPmtStsRpt.GrpHdr.CreDtTm),
     EftTlvData: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmMtd ?: "",
     RetrievalReferenceNumber: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmAcct?.Id?.IBAN ?: "",
     MerchantType: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmAcct?.Id?.Othr?.Id ?: "",
@@ -245,8 +247,8 @@ function getDataFromSupplementaryData(iso20022:SplmtryData[]? supplementaryData,
 function getDateTime(string utcTime) returns string|error {
 
     time:Civil civilDateTime = check getCivilDateTime(utcTime);
-    return civilDateTime.month.toString().padZero(2) + civilDateTime.day.toString().padZero(2) 
-        + civilDateTime.hour.toString().padZero(2) + civilDateTime.minute.toString().padZero(2) 
+    return civilDateTime.month.toString().padZero(2) + civilDateTime.day.toString().padZero(2)
+        + civilDateTime.hour.toString().padZero(2) + civilDateTime.minute.toString().padZero(2)
         + regexp:split(seperator, civilDateTime.second.toString())[0].padZero(2);
 }
 
@@ -257,7 +259,7 @@ function getDateTime(string utcTime) returns string|error {
 function getTime(string utcTime) returns string|error {
 
     time:Civil civilDateTime = check getCivilDateTime(utcTime);
-    return civilDateTime.hour.toString().padZero(2) + civilDateTime.minute.toString().padZero(2) 
+    return civilDateTime.hour.toString().padZero(2) + civilDateTime.minute.toString().padZero(2)
         + regexp:split(seperator, civilDateTime.second.toString())[0].padZero(2);
 }
 
