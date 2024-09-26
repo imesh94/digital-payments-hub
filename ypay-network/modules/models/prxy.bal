@@ -14,6 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// This file contains the structure mapping to PayNet proxy model.
+// https://docs.developer.paynet.my/docs/API-standards/message-signature-qr
+
 public type PrxyLookUpCBFT record {|
     GrpHdr GrpHdr;
     CdtTrfTxInf CdtTrfTxInf;

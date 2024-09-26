@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// This file contains the structure mapping to PayNet fund transfer model.
+
 public type FundTransfer record {|
     Data data;
 |};
