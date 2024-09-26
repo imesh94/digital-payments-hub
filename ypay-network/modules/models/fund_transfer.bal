@@ -43,11 +43,11 @@ public type SecondaryId record {|
     string value;
 |};
 
-public type fundTransferResponse record {|
-    ResposneData data;
+public type FundTransferResponse record {|
+    ResponseData data;
 |};
 
-public type ResposneData record {|
+public type ResponseData record {|
     string businessMessageId;
     string createdDateTime;
     string code;
