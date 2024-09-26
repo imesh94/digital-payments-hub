@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public type Metadata readonly & record {
+public type DriverMetadata readonly & record {
 
     string driverName;
     string countryCode;

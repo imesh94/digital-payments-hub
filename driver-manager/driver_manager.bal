@@ -21,6 +21,7 @@ import ballerina/log;
 configurable int port = 9090;
 
 type Event readonly & record {
+
     string id;
     string correlationId;
     string eventType;
@@ -31,7 +32,8 @@ type Event readonly & record {
     string errorMessage;
 };
 
-type Metadata readonly & record {
+type DriverMetadata readonly & record {
+
     string driverName;
     string countryCode;
     string paymentEndpoint;
@@ -41,19 +43,19 @@ EventPublisher eventPublisher = new EventPublisher("./driver-manager-events.log"
 
 service /payments\-hub on new http:Listener(port) {
 
-    map<Metadata> metadataMap = {};
+    map<DriverMetadata> metadataMap = {};
 
-    resource function get metadata() returns Metadata[] {
+    resource function get metadata() returns DriverMetadata[] {
 
         log:printInfo("Received metadata request for all countries");
-        Metadata[] metadataArray = self.metadataMap.toArray();
+        DriverMetadata[] metadataArray = self.metadataMap.toArray();
         return metadataArray;
     }
 
-    resource function get metadata/[string countryCode]() returns Metadata|http:NotFound {
+    resource function get metadata/[string countryCode]() returns DriverMetadata|http:NotFound {
 
         log:printInfo("Received metadata request for country code " + countryCode);
-        Metadata? metadata = self.metadataMap[countryCode];
+        DriverMetadata? metadata = self.metadataMap[countryCode];
         if metadata is () {
             return http:NOT_FOUND;
         } else {
@@ -61,7 +63,7 @@ service /payments\-hub on new http:Listener(port) {
         }
     }
 
-    resource function post register(@http:Payload Metadata metadata) returns Metadata {
+    resource function post register(@http:Payload DriverMetadata metadata) returns DriverMetadata {
 
         log:printInfo("Received driver registration request");
         self.metadataMap[metadata.countryCode] = metadata;

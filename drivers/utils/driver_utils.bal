@@ -25,7 +25,7 @@ import ballerina/uuid;
 http:Client hubClient = check new ("localhost:9090"); //ToDo: Remove
 public http:Client paymentNetworkClient = check new ("localhost:9092"); //ToDo: Remove
 map<http:Client> httpClientMap = {};
-Metadata[] metadataList = [];
+DriverMetadata[] metadataList = [];
 
 # Initialize http/tcp listeners for the driver based on configurations.
 #
@@ -69,21 +69,16 @@ public function initializeDestinationDriverClients() returns error? {
 
 # Register driver at payments hub.
 #
-# + driverName - name of the driver  
-# + countryCode - country code of the driver  
-# + paymentEndpoint - payments endpoint which can be called by source drivers
+# + driverMetadata - populated driver metadata record
 # + return - error
-public function registerDriverAtHub(string driverName, string countryCode, string paymentEndpoint) returns error? {
+public function registerDriverAtHub(DriverMetadata driverMetadata) returns error? {
 
-    log:printInfo("Registering driver " + driverName + " at payments hub.");
-    json registerResponse = check hubClient->/payments\-hub/register.post({
-        driverName: driverName,
-        countryCode: countryCode,
-        paymentEndpoint: paymentEndpoint
-    });
+    log:printInfo("Registering driver " + driverMetadata.driverName + " at payments hub.");
+    log:printInfo("Driver info: " + driverMetadata.toString());
+    DriverMetadata registerResponse = check hubClient->/payments\-hub/register.post(driverMetadata);
 
     // ToDo: Add error handling and retry logic
-    log:printInfo("\nRegistration response from hub: " + registerResponse.toJsonString());
+    log:printInfo("\nRegistration response from hub: " + registerResponse.toString());
 
 }
 
@@ -187,12 +182,30 @@ public function createEvent(string correlationId, EventType eventType, string or
     return event;
 }
 
+# Get a ppopulated driver metadata record with given arguments
+#
+# + driverName - name of the driver  
+# + countryCode - country code of the driver  
+# + paymentEndpoint - payments endpoint which can be called by source drivers
+# + return - populated driver metadata record
+public function createDriverMetadata(string driverName, string countryCode, string paymentEndpoint)
+    returns DriverMetadata {
+
+    DriverMetadata driverMetadata = {
+        driverName: driverName,
+        countryCode: countryCode,
+        paymentEndpoint: paymentEndpoint
+    };
+
+    return driverMetadata;
+}
+
 # Get metadata of the registered drivers at payments hub.
 #
 # + return - driver metadata | error
-function getdriverMetadataFromHub() returns Metadata[]|error {
+function getdriverMetadataFromHub() returns DriverMetadata[]|error {
 
-    Metadata[]|http:ClientError metadataList = hubClient->get("/payments-hub/metadata");
+    DriverMetadata[]|http:ClientError metadataList = hubClient->get("/payments-hub/metadata");
 
     if (metadataList is error) {
         log:printError("Error occurred when getting driver metadata from payments hub");
@@ -257,9 +270,9 @@ class DestinationClientInitializationJob {
 
     public function execute() {
 
-        Metadata[]|error newMetadataList = getdriverMetadataFromHub();
+        DriverMetadata[]|error newMetadataList = getdriverMetadataFromHub();
 
-        if (newMetadataList is Metadata[]) {
+        if (newMetadataList is DriverMetadata[]) {
             if (metadataList == newMetadataList) {
                 log:printDebug("No change in cached destination driver metadata. " +
                         "No requirement to create new http clients.");
