@@ -14,11 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/http;
-import ballerina/time;
-import ballerina/data.jsondata;
 import yPayNetwork.models;
+
+import ballerina/data.jsondata;
+import ballerina/http;
 import ballerina/log;
+import ballerina/time;
 
 # A service representing a network-accessible API
 # bound to port `9090`.
@@ -29,19 +30,19 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
     # + caller - http caller
     # + req - http request
     # + return - return value description
-    isolated resource function get resolution/[string proxyType]/[string proxy](http:Caller caller, http:Request req) 
+    isolated resource function get resolution/[string proxyType]/[string proxy](http:Caller caller, http:Request req)
         returns error? {
 
         string xBusinessMsgId = check req.getHeader("X-Business-Message-Id");
-        log:printInfo("Received a resolution request for proxy: " + proxy + " of type: " + proxyType + 
-            " with business message ID: " + xBusinessMsgId);
+        log:printInfo("Received a resolution request for proxy: " + proxy + " of type: " + proxyType +
+                " with business message ID: " + xBusinessMsgId);
         time:Utc utcTime = time:utcNow();
         string utcString = time:utcToString(utcTime);
-        
+
         models:PrxyLookUpRspnCBFT response = {
             GrpHdr: {
-                MsgId: xBusinessMsgId, 
-                CreDtTm: utcString.toString(), 
+                MsgId: xBusinessMsgId,
+                CreDtTm: utcString.toString(),
                 MsgSndr: {
                     Agt: {
                         FinInstnId: {
@@ -51,13 +52,13 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
                         }
                     }
                 }
-            }, 
+            },
             LkUpRspn: {
-                OrgnlId: "", 
+                OrgnlId: "",
                 OrgnlPrxyRtrvl: {
-                    Val: proxy, 
+                    Val: proxy,
                     Tp: proxyType
-                }, 
+                },
                 RegnRspn: {
                     PrxRspnSts: "ACTC",
                     StsRsnInf: {
@@ -65,19 +66,19 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
                         Prtry: ""
                     },
                     Prxy: {
-                        Tp: proxyType, 
+                        Tp: proxyType,
                         Val: proxy
                     },
                     Regn: {
-                        RegnId: "0075800025", 
-                        DsplNm: "Bank Account", 
+                        RegnId: "0075800025",
+                        DsplNm: "Bank Account",
                         Agt: {
                             FinInstnId: {
                                 Othr: {
                                     Id: "****MYKL"
                                 }
                             }
-                        }, 
+                        },
                         Acct: {
                             Id: {
                                 Othr: {
@@ -85,31 +86,31 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
                                 }
                             },
                             Nm: "Bank Account"
-                        }, 
+                        },
                         PreAuthrsd: ""
                     }
                 }
-            }, 
+            },
             OrgnlGrpInf: {
-                OrgnlMsgId: xBusinessMsgId, 
+                OrgnlMsgId: xBusinessMsgId,
                 OrgnlMsgNmId: ""
-                }
-            };
+            }
+        };
         check caller->respond(response);
     }
 
     isolated resource function post register(http:Caller caller, http:Request req) returns error? {
-        
+
         json payload = check req.getJsonPayload();
         log:printInfo("Received a registration request with payload: " + payload.toString());
-        models:fundTransfer fundTransferPayload = check jsondata:parseAsType(payload);
+        models:FundTransfer fundTransferPayload = check jsondata:parseAsType(payload);
         string xBusinessMsgId = check req.getHeader("X-Business-Message-Id");
-        models:fundTransferResponse response = {
+        models:FundTransferResponse response = {
             data: {
-                businessMessageId: xBusinessMsgId, 
+                businessMessageId: xBusinessMsgId,
                 createdDateTime: fundTransferPayload.data.createdDateTime,
-                code: "ACTC", 
-                reason: "U000", 
+                code: "ACTC",
+                reason: "U000",
                 registrationId: "0075800039"
             }
         };

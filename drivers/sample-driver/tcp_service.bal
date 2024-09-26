@@ -26,7 +26,8 @@ configurable map<string> payment_network = ?;
 public function main() returns error? {
 
     string driverOutboundBaseUrl = "http://" + driver.outbound.host + ":" + driver.outbound.port.toString();
-    check util:registerDriverAtHub(driver.name, driver.code, driverOutboundBaseUrl);
+    util:DriverMetadata driverMetadata = util:createDriverMetadata(driver.name, driver.code, driverOutboundBaseUrl);
+    check util:registerDriverAtHub(driverMetadata);
     check util:initializeDriverListeners(driver, new DriverTCPConnectionService(driver.name));
     check util:initializeDriverHttpClients(payment_hub["baseUrl"], payment_network["baseUrl"]);
     check util:initializeDestinationDriverClients();

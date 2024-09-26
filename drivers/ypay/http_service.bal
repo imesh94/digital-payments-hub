@@ -14,9 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import digitalpaymentshub/drivers.util;
-import ballerina/log;
 import ballerina/http;
+import ballerina/log;
+
+import digitalpaymentshub/drivers.util;
 
 configurable util:DriverConfig driver = ?;
 configurable map<string> payment_hub = ?;
@@ -26,14 +27,14 @@ public function main() returns error? {
     // register the service
     string driverOutboundBaseUrl = "http://" + driver.outbound.host + ":" + driver.outbound.port.toString();
     log:printInfo(driver.name + " driver outbound endpoint: https://localhost:" + driver.outbound.port.toString());
-    check util:registerDriverAtHub(driver.name, driver.code, driverOutboundBaseUrl);
+    util:DriverMetadata driverMetadata = util:createDriverMetadata(driver.name, driver.code, driverOutboundBaseUrl);
+    check util:registerDriverAtHub(driverMetadata);
     // connection initialization
     check util:initializeDriverListeners(driver, new DriverHTTPConnectionService(driver.name));
     // http client initialization
     check util:initializeDestinationDriverClients();
     check util:initializeDriverHttpClients(payment_hub["baseUrl"], payment_network["baseUrl"]);
 }
-
 
 # Driver http client for internal hub communications.
 service http:InterceptableService / on new http:Listener(driver.outbound.port) {
@@ -45,33 +46,36 @@ service http:InterceptableService / on new http:Listener(driver.outbound.port) {
     # - returns error if an error occurred
     # + return - return value description
     resource function post transact(http:Caller caller, http:Request req) returns error? {
-        
+
         // Extract the json payload from the request
         json payload = check req.getJsonPayload();
         string correlationId = check req.getHeader("X-Correlation-ID");
-        util:Event receivedEvent = util:createEvent(correlationId, util:RECEIVED_FROM_SOURCE_DRIVER, 
-            "source-driver", driver.code + "-driver", "success", "N/A");
+        util:Event receivedEvent = util:createEvent(correlationId, util:RECEIVED_FROM_SOURCE_DRIVER,
+                "source-driver", driver.code + "-driver", "success", "N/A");
         util:publishEvent(receivedEvent);
         http:Response response = check handleOutbound(payload, correlationId);
         // return response;
-        util:Event forwardingEvent = util:createEvent(correlationId, util:FORWARDING_TO_SOURCE_DRIVER, 
-            driver.code + "-driver", "destination-driver", "success", "N/A");
+        util:Event forwardingEvent = util:createEvent(correlationId, util:FORWARDING_TO_SOURCE_DRIVER,
+                driver.code + "-driver", "destination-driver", "success", "N/A");
         util:publishEvent(forwardingEvent);
         check caller->respond(response);
     }
+
     public function createInterceptors() returns http:Interceptor|http:Interceptor[] {
         return new ResponseErrorInterceptor();
     }
 }
+
 public service class DriverHTTPConnectionService {
     *util:HTTPConnectionService;
 
     string driverName;
+
     function init(string driverName) {
         log:printInfo("Initialized new HTTP listener for " + driverName);
         self.driverName = driverName;
     }
-    
+
     public function onRequest(http:Caller caller, http:Request req) returns error? {
 
         string contentType = req.getContentType();

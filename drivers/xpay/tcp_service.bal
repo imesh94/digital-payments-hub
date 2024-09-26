@@ -14,13 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 import ballerina/file;
 import ballerina/http;
 import ballerina/log;
 import ballerina/tcp;
-import digitalpaymentshub/drivers.util;
 import ballerinax/financial.iso8583;
+
+import digitalpaymentshub/drivers.util;
 
 configurable util:DriverConfig driver = ?;
 configurable map<string> payment_hub = ?;
@@ -30,7 +30,8 @@ public function main() returns error? {
     // register the service
     string driverOutboundBaseUrl = "http://" + driver.outbound.host + ":" + driver.outbound.port.toString();
     log:printInfo(driver.name + " driver outbound endpoint: http://localhost:" + driver.outbound.port.toString());
-    check util:registerDriverAtHub(driver.name, driver.code, driverOutboundBaseUrl);
+    util:DriverMetadata driverMetadata = util:createDriverMetadata(driver.name, driver.code, driverOutboundBaseUrl);
+    check util:registerDriverAtHub(driverMetadata);
     // connection initialization
     check util:initializeDriverListeners(driver, new DriverTCPConnectionService(driver.name));
     // http client initialization
@@ -41,8 +42,8 @@ public function main() returns error? {
     if xmlFilePath is string {
         check iso8583:initialize(xmlFilePath);
     } else {
-        log:printWarn("Error occurred while getting the absolute path of the ISO 8583 configuration file. " + 
-            "Loading with default configurations.");
+        log:printWarn("Error occurred while getting the absolute path of the ISO 8583 configuration file. " +
+                "Loading with default configurations.");
     }
 }
 
@@ -58,6 +59,7 @@ service http:InterceptableService / on new http:Listener(driver.outbound.port) {
     resource function post transact(http:Caller caller, http:Request req) returns error? {
         // Todo - implement the logic
     }
+
     public function createInterceptors() returns http:Interceptor|http:Interceptor[] {
         return new ResponseErrorInterceptor();
     }
