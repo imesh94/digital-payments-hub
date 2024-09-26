@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public type fundTransfer record {|
+public type FundTransfer record {|
     Data data;
 |};
 
