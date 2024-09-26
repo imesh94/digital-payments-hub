@@ -48,7 +48,8 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
     string|error mtiMsg = string:fromCodePointInts(data.slice(headerLength+versionNameLength, headerLength+versionNameLength+mtiLLength)); //todo check
     // string bitmap1 = getHexString(data.slice(headerLength+versionNameLength+4,headerLength+versionNameLength+12));
     // string bitmap2 = getHexString(data.slice(headerLength+versionNameLength+12,headerLength+versionNameLength+20));
-    int bitmapLastIndex = headerLength+ versionNameLength + mtiLLength + buffer + 16 * countBitmaps(data.slice(headerLength+versionNameLength+mtiLLength));
+    int bitmapCount = countBitmaps(data.slice(headerLength + versionNameLength + mtiLLength + buffer));
+    int bitmapLastIndex = headerLength+ versionNameLength + mtiLLength + buffer + 8 * bitmapCount;
     string bitmaps = getHexString(data.slice(headerLength + versionNameLength + mtiLLength + buffer, bitmapLastIndex));
     string|error dataString = string:fromCodePointInts(data.slice(bitmapLastIndex));
 
