@@ -27,6 +27,15 @@ configurable map<string> payment_hub = ?;
 configurable map<string> payment_network = ?;
 
 public function main() returns error? {
+
+    // initialize 8583 library with custom xml
+    string|file:Error xmlFilePath = file:getAbsolutePath("jposdefv87.xml");
+    if xmlFilePath is string {
+        check iso8583:initialize(xmlFilePath);
+    } else {
+        log:printWarn("Error occurred while getting the absolute path of the ISO 8583 configuration file. " +
+                "Loading with default configurations.");
+    }
     // register the service
     string driverOutboundBaseUrl = "http://" + driver.outbound.host + ":" + driver.outbound.port.toString();
     log:printInfo(driver.name + " driver outbound endpoint: http://localhost:" + driver.outbound.port.toString());
@@ -37,14 +46,6 @@ public function main() returns error? {
     // http client initialization
     check util:initializeDestinationDriverClients();
     check util:initializeDriverHttpClients(payment_hub["baseUrl"], payment_network["baseUrl"]);
-    // initialize 8583 library with custom xml
-    string|file:Error xmlFilePath = file:getAbsolutePath("resources/jposdefv87.xml");
-    if xmlFilePath is string {
-        check iso8583:initialize(xmlFilePath);
-    } else {
-        log:printWarn("Error occurred while getting the absolute path of the ISO 8583 configuration file. " +
-                "Loading with default configurations.");
-    }
 }
 
 # Driver http client for internal hub communications.
