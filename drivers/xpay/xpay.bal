@@ -272,28 +272,6 @@ function countBitmapsFromHexString(string data) returns int {
     }
 }
 
-// function countBitmapsFromHexString(string data) returns int|error {
-//     int count = 1;
-//     int i = 0;
-//     while true {
-//         string bitmap = data.substring(i, i + 1 * 16);
-//         string firstChar = bitmap.substring(0, 1);
-//         int|error firstCharInt = int:fromString(firstChar);
-//         if (firstCharInt is error) {
-//             // Assume char A-E
-//             count += 1;
-//             i += 1;
-//         } else if (firstCharInt > 7) {
-//             count += 1;
-//             i += 1;
-//         } else {
-//             break;
-//         }
-//     }
-
-//     return count;
-// }
-
 function countBitmaps(byte[] data) returns int {
     int count = 0;
     int i = 0;
