@@ -18,7 +18,6 @@ import ballerina/lang.'decimal as decimal;
 import ballerina/lang.regexp;
 import ballerina/log;
 import ballerina/time;
-
 import ballerinax/financial.iso20022;
 import ballerinax/financial.iso8583;
 
@@ -76,7 +75,7 @@ function transformMTI200ToISO20022(iso8583:MTI_0200 mti0200) returns iso20022:FI
     SplmtryData: mapSupplementaryData(mti0200)
 };
 
-function transformPacs002toMTI0210(iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt, iso8583:MTI_0200 originalMsg) 
+function transformPacs002toMTI0210(iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt, iso8583:MTI_0200 originalMsg)
     returns iso8583:MTI_0210|error => {
     MTI: "0210",
     PrimaryAccountNumber: originalMsg.PrimaryAccountNumber ?: (),
@@ -106,16 +105,16 @@ function transformPacs002toMTI0210(iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt, iso
     MessageAuthenticationCode: originalMsg.MessageAuthenticationCode ?: "11111111"
 };
 
-function buildDE120(string? originalField, iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt ) returns string {
+function buildDE120(string? originalField, iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt) returns string {
     string accountIds = fiToFiPmtStsRpt.TxInfAndSts?.OrgnlTxRef?.CdtrAgt?.FinInstnId?.ClrSysMmbId?.MmbId ?: "";
     string accountIdsLength = accountIds.length().toString().padZero(3);
-    string field017 = "017" + accountIdsLength + accountIds ;
+    string field017 = "017" + accountIdsLength + accountIds;
     string accountNames = fiToFiPmtStsRpt.TxInfAndSts?.OrgnlTxRef?.CdtrAgt?.FinInstnId?.Nm ?: "";
-    string accountNamesLength = accountIds.length().toString().padZero(3);
-    string field009 = "009" + accountNamesLength + accountNames ;
+    string accountNamesLength = accountNames.length().toString().padZero(3);
+    string field009 = "009" + accountNamesLength + accountNames;
     string agentIds = fiToFiPmtStsRpt.TxInfAndSts?.OrgnlTxRef?.CdtrAgt?.FinInstnId?.BICFI ?: "";
     string agentIdsLength = agentIds.length().toString().padZero(3);
-    string field014 = "014" + agentIdsLength + agentIds ;
+    string field014 = "014" + agentIdsLength + agentIds;
     string originalFieldString = originalField ?: "";
     return originalFieldString + field017 + field009 + field014;
 }

@@ -78,7 +78,7 @@ function transformPrxy004toPacs002(models:PrxyLookUpRspnCBFT prxyLookUpRspnCbft)
 
 function getAccountIds(models:Regn[]? registers) returns string {
     if (registers is models:Regn[]) {
-        
+
         string result = "";
         foreach models:Regn value in registers {
             result += value.Acct.Id.Othr.Id + "|";
@@ -91,10 +91,10 @@ function getAccountIds(models:Regn[]? registers) returns string {
 
 function getAccountNames(models:Regn[]? registers) returns string {
     if (registers is models:Regn[]) {
-        
-        string result = ""; 
+
+        string result = "";
         foreach models:Regn value in registers {
-            result += value.Acct.Nm ?: "" + "|";
+            result += (value.Acct.Nm ?: "") + "|";
         }
         return result.substring(0, result.length() - 1);
     }
@@ -104,7 +104,7 @@ function getAccountNames(models:Regn[]? registers) returns string {
 
 function getAgentIds(models:Regn[]? registers) returns string {
     if (registers is models:Regn[]) {
-        
+
         string result = "";
         foreach models:Regn value in registers {
             result += value.Agt.FinInstnId.Othr.Id + "|";
@@ -114,6 +114,7 @@ function getAgentIds(models:Regn[]? registers) returns string {
     return "";
 
 }
+
 isolated function transformPacs008toFundTransfer(iso20022:FIToFICstmrCdtTrf fiToFiCstmrCdtTrf) returns models:fundTransfer|error => {
     data: {
         businessMessageId: check generateXBusinessMsgId(fiToFiCstmrCdtTrf.CdtTrfTxInf[0].DbtrAcct?.Id?.Othr?.Id ?: ""),
