@@ -69,27 +69,48 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
                         Tp: proxyType,
                         Val: proxy
                     },
-                    Regn: {
+                Regn: [
+                    {
                         RegnId: "0075800025",
                         DsplNm: "Bank Account",
                         Agt: {
                             FinInstnId: {
                                 Othr: {
-                                    Id: "****MYKL"
+                                    Id: "AIBMMYKLXXX"
                                 }
                             }
                         },
                         Acct: {
                             Id: {
                                 Othr: {
-                                    Id: "********0105"
+                                    Id: "111222333444"
                                 }
                             },
-                            Nm: "Bank Account"
+                            Nm: "ACCOUNT1"
+                        },
+                        PreAuthrsd: ""
+                    },
+                    {
+                        RegnId: "0075800025",
+                        DsplNm: "Bank Account",
+                        Agt: {
+                            FinInstnId: {
+                                Othr: {
+                                    Id: "AIBMMYKLXXX"
+                                }
+                            }
+                        },
+                        Acct: {
+                            Id: {
+                                Othr: {
+                                    Id: "555666777888"
+                                }
+                            },
+                            Nm: "ACCOUNT2"
                         },
                         PreAuthrsd: ""
                     }
-                }
+                ]}
             },
             OrgnlGrpInf: {
                 OrgnlMsgId: xBusinessMsgId,

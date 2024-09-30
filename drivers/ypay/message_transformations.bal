@@ -18,7 +18,7 @@ import drivers.paynet.models;
 
 import ballerinax/financial.iso20022;
 
-isolated function transformPrxy004toPacs002(models:PrxyLookUpRspnCBFT prxyLookUpRspnCbft)
+function transformPrxy004toPacs002(models:PrxyLookUpRspnCBFT prxyLookUpRspnCbft)
     returns iso20022:FIToFIPmtStsRpt => {
     GrpHdr: {
         MsgId: prxyLookUpRspnCbft.GrpHdr.MsgId,
@@ -48,9 +48,9 @@ isolated function transformPrxy004toPacs002(models:PrxyLookUpRspnCBFT prxyLookUp
             },
             CdtrAgt: {
                 FinInstnId: {
-                    ClrSysMmbId: {MmbId: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn?.Acct?.Id?.Othr?.Id ?: ""},
-                    BICFI: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn?.Agt?.FinInstnId?.Othr?.Id,
-                    Nm: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn?.Acct?.Nm
+                    ClrSysMmbId: {MmbId: getAccountIds(prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn)},
+                    BICFI: getAgentIds(prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn),
+                    Nm: getAccountNames(prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn)
                 }
             },
             Cdtr: {},
@@ -76,6 +76,44 @@ isolated function transformPrxy004toPacs002(models:PrxyLookUpRspnCBFT prxyLookUp
     }
 };
 
+function getAccountIds(models:Regn[]? registers) returns string {
+    if (registers is models:Regn[]) {
+        
+        string result = "";
+        foreach models:Regn value in registers {
+            result += value.Acct.Id.Othr.Id + "|";
+        }
+        return result.substring(0, result.length() - 1);
+    }
+    return "";
+
+};
+
+function getAccountNames(models:Regn[]? registers) returns string {
+    if (registers is models:Regn[]) {
+        
+        string result = ""; 
+        foreach models:Regn value in registers {
+            result += value.Acct.Nm ?: "" + "|";
+        }
+        return result.substring(0, result.length() - 1);
+    }
+    return "";
+
+}
+
+function getAgentIds(models:Regn[]? registers) returns string {
+    if (registers is models:Regn[]) {
+        
+        string result = "";
+        foreach models:Regn value in registers {
+            result += value.Agt.FinInstnId.Othr.Id + "|";
+        }
+        return result.substring(0, result.length() - 1);
+    }
+    return "";
+
+}
 isolated function transformPacs008toFundTransfer(iso20022:FIToFICstmrCdtTrf fiToFiCstmrCdtTrf) returns models:fundTransfer|error => {
     data: {
         businessMessageId: check generateXBusinessMsgId(fiToFiCstmrCdtTrf.CdtTrfTxInf[0].DbtrAcct?.Id?.Othr?.Id ?: ""),

@@ -95,17 +95,30 @@ function transformPacs002toMTI0210(iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt, iso
     RetrievalReferenceNumber: originalMsg.RetrievalReferenceNumber,
     AuthorizationNumber: "123456",
     ResponseCode: "00",
-    CardAccepterTerminalIdentification: originalMsg.CardAccepterTerminalIdentification ?: (),
-    CardAccepterIdentificationCode: originalMsg.CardAccepterIdentificationCode ?: (),
-    CardAccepterNameLocation: originalMsg.CardAccepterNameLocation ?: (),
+    CardAcceptorTerminalID: originalMsg.CardAcceptorTerminalID ?: (),
+    CardAcceptorIDCode: originalMsg.CardAcceptorIDCode ?: (),
+    CardAcceptorNameLocation: originalMsg.CardAcceptorNameLocation ?: (),
     CurrencyCodeTransaction: originalMsg.CurrencyCodeTransaction,
     ReceivingInstitutionIdentificationCode: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmAcct?.Id?.Othr?.Id ?: "9000",
     AccountIdentification1: originalMsg.AccountIdentification1 ?: fiToFiPmtStsRpt.TxInfAndSts?.InstgAgt?.FinInstnId?.Othr?.Id,
     AccountIdentification2: originalMsg.AccountIdentification2 ?: fiToFiPmtStsRpt.TxInfAndSts?.InstdAgt?.FinInstnId?.Othr?.Id,
-    EftTlvData: originalMsg.EftTlvData,
-    MessageAuthenticationCode: originalMsg.MessageAuthenticationCode ?: "****"
-     //todo ME 22 38 102 103 128
+    EftTlvData: buildDE120(originalMsg.EftTlvData, fiToFiPmtStsRpt),
+    MessageAuthenticationCode: originalMsg.MessageAuthenticationCode ?: "11111111"
 };
+
+function buildDE120(string? originalField, iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt ) returns string {
+    string accountIds = fiToFiPmtStsRpt.TxInfAndSts?.OrgnlTxRef?.CdtrAgt?.FinInstnId?.ClrSysMmbId?.MmbId ?: "";
+    string accountIdsLength = accountIds.length().toString().padZero(3);
+    string field017 = "017" + accountIdsLength + accountIds ;
+    string accountNames = fiToFiPmtStsRpt.TxInfAndSts?.OrgnlTxRef?.CdtrAgt?.FinInstnId?.Nm ?: "";
+    string accountNamesLength = accountIds.length().toString().padZero(3);
+    string field009 = "009" + accountNamesLength + accountNames ;
+    string agentIds = fiToFiPmtStsRpt.TxInfAndSts?.OrgnlTxRef?.CdtrAgt?.FinInstnId?.BICFI ?: "";
+    string agentIdsLength = agentIds.length().toString().padZero(3);
+    string field014 = "014" + agentIdsLength + agentIds ;
+    string originalFieldString = originalField ?: "";
+    return originalFieldString + field017 + field009 + field014;
+}
 
 function transformMTI0800toMTI0810(iso8583:MTI_0800 mti0800) returns iso8583:MTI_0810 => {
     MTI: "810",
@@ -136,8 +149,8 @@ function mapSupplementaryData(iso8583:MTI_0200 mti0200) returns iso20022:Splmtry
     addOptionalFields(supplementaryData, "SettlementDate", mti0200.SettlementDate);
     addOptionalFields(supplementaryData, "DateCapture", mti0200.DateCapture);
     addOptionalFields(supplementaryData, "PointOfServiceEntryMode", mti0200.PointOfServiceEntryMode);
-    addOptionalFields(supplementaryData, "CardAccepterIdentificationCode", mti0200.CardAccepterIdentificationCode);
-    addOptionalFields(supplementaryData, "CardAccepterNameLocation", mti0200.CardAccepterNameLocation);
+    addOptionalFields(supplementaryData, "CardAcceptorIDCode", mti0200.CardAcceptorIDCode);
+    addOptionalFields(supplementaryData, "CardAcceptorNameLocation", mti0200.CardAcceptorNameLocation);
     addOptionalFields(supplementaryData, "AccountIdentification1", mti0200.AccountIdentification1);
     addOptionalFields(supplementaryData, "MessageAuthenticationCode", mti0200.MessageAuthenticationCode);
     // process field 120 and add to supplementary data
@@ -209,28 +222,33 @@ function addOptionalFields(map<string> supplementaryData, string fieldName, stri
 #
 # + field120 - ISO 8583 field 120
 # + return - map of field 120 values
-function parseField120(string field120) returns map<string> {
+function parseField120(string? field120) returns map<string> {
 
-    map<string> field120Parts = {};
-    int i = 0;
-    while i < field120.length() {
-        if (i + 6 > field120.length()) {
-            log:printError("Error while parsing field 120: Field length is not enough to parse the next element");
-            break;
+    if (field120 is string) {
+        map<string> field120Parts = {};
+        int i = 0;
+        while i < field120.length() {
+            if (i + 6 > field120.length()) {
+                log:printError("Error while parsing field 120: Field length is not enough to parse the next element");
+                break;
+            }
+            string tagId = field120.substring(i, i + 3);
+            int elementLength = check int:fromString(field120.substring(i + 3, i + 6));
+            if (i + 6 + elementLength > field120.length()) {
+                log:printError("Error while parsing field 120: Field length is not enough to parse the next element");
+                break;
+            }
+            string data = field120.substring(i + 6, i + 6 + elementLength);
+            field120Parts[tagId] = data;
+            i = i + 6 + elementLength;
+        } on fail var e {
+            log:printError("Error while parsing field 120: " + e.message());
         }
-        string tagId = field120.substring(i, i + 3);
-        int elementLength = check int:fromString(field120.substring(i + 3, i + 6));
-        if (i + 6 + elementLength > field120.length()) {
-            log:printError("Error while parsing field 120: Field length is not enough to parse the next element");
-            break;
-        }
-        string data = field120.substring(i + 6, i + 6 + elementLength);
-        field120Parts[tagId] = data;
-        i = i + 6 + elementLength;
-    } on fail var e {
-        log:printError("Error while parsing field 120: " + e.message());
+        return field120Parts;
     }
-    return field120Parts;
+    else {
+        return {};
+    }
 }
 
 # Get supplementary data value from the supplementary data array.

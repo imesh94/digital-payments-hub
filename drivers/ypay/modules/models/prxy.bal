@@ -137,7 +137,7 @@ public type RegnRspn record {|
     StsRsnInf StsRsnInf?;
     Requester Prxy?;
     string LkUpRef?;
-    Regn Regn?;
+    Regn[] Regn?;
     CustomData CustomData?;
 |};
 

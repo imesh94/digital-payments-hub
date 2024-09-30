@@ -16,7 +16,7 @@ repository = "local"
 [[dependency]]
 org = "ballerinax"
 name = "financial.iso8583"
-version = "0.1.3"
+version = "0.1.6"
 repository = "local"
 
 [[dependency]]
