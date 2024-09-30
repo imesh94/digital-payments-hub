@@ -56,7 +56,7 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
     int headerLength = 8; // todo 4 for lankapay
     int versionNameLength = 40; // todo 20 for LankaPay
     int mtiLLength = 8;
-    int buffer = 0;
+    //int buffer = 0;
     int nextIndex = headerLength + versionNameLength;
     // let's convert all to the original hex representation. Even though this is a string,
     // it represents the actual hexa decimal encoded byte stream.
@@ -66,7 +66,11 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
     string|error mtiMsg = hex.substring(nextIndex, nextIndex + mtiLLength);
     nextIndex = nextIndex + mtiLLength;
     // count the number of bitmaps. there can be multiple bitmaps. but the first bit of the bitmap indicates whether there is another bitmap.
-    int bitmapCount = countBitmapsFromHexString(hex.substring(nextIndex));
+    int|error bitmapCount = countBitmapsFromHexString(hex.substring(nextIndex));
+    if (bitmapCount is error) {
+        log:printError(bitmapCount.message());
+        return [];
+    }
     // a bitmap in the hex representation is represented in 16 chars.
     int bitmapLastIndex = nextIndex + 16 * bitmapCount;
     string bitmaps = hex.substring(nextIndex, bitmapLastIndex);
@@ -152,7 +156,7 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
                                         + iso20022Response.message()).toBytes();
                                     } else {
                                         // transform to ISO 8583 MTI 0210
-                                        iso8583:MTI_0210|error mti0210msg = 
+                                        iso8583:MTI_0210|error mti0210msg =
                                             transformPacs002toMTI0210(iso20022Response, validatedMsg);
                                         if (mti0210msg is error) {
                                             log:printError("Error while transforming to ISO 8583 MTI 0210: "
@@ -256,10 +260,10 @@ function build8583Response(string msg) returns byte[]|error {
 
     byte[] mti = msg.substring(0, 4).toBytes();
 
-    int bitmapCount = countBitmapsFromHexString(msg.substring(4));
+    int bitmapCount = check countBitmapsFromHexString(msg.substring(4));
     byte[] payload = msg.substring(4 + 16 * bitmapCount).toBytes();
-    // byte[] bitmaps = check array:fromBase16(msg.substring(4, 4 + 16 * bitmapCount));
-    byte[] bitmaps = msg.substring(4, 4 + 16 * bitmapCount).toBytes();
+    byte[] bitmaps = check array:fromBase16(msg.substring(4, 4 + 16 * bitmapCount));
+    //byte[] bitmaps = msg.substring(4, 4 + 16 * bitmapCount).toBytes();
     byte[] versionBytes = "ISO198730           ".toBytes();
     int payloadSize = mti.length() + bitmaps.length() + payload.length() + versionBytes.length();
     string header = payloadSize.toHexString().padZero(8); //todo 8
@@ -269,13 +273,18 @@ function build8583Response(string msg) returns byte[]|error {
     // return [...mti, ...bitmaps, ...payload];
 }
 
-function countBitmapsFromHexString(string data) returns int {
-    byte[]|error fromBase16 = array:fromBase16(data);
-    if fromBase16 is byte[] {
-        return countBitmaps(fromBase16);
-    } else {
-        return 0;
+function countBitmapsFromHexString(string data) returns int|error {
+    // parse the first character of the bitmap to determine whether there are more bitmaps
+    int count = 1;
+    int idx = 0;
+    int a = check int:fromHexString(data.substring(idx, idx + 2));
+
+    while (hasMoreBitmaps(a)) {
+        count += 1;
+        idx += 16;
+        a = check int:fromHexString(data.substring(idx, idx + 2));
     }
+    return count;
 }
 
 function countBitmaps(byte[] data) returns int {
@@ -293,7 +302,7 @@ function countBitmaps(byte[] data) returns int {
     return count;
 }
 
-function hasMoreBitmaps(byte data) returns boolean {
+function hasMoreBitmaps(int data) returns boolean {
     int mask = 1 << 7;
     int bitWiseAnd = data & mask;
     if (bitWiseAnd == 0) {
