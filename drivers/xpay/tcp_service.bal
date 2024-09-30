@@ -29,8 +29,9 @@ configurable map<string> payment_network = ?;
 public function main() returns error? {
 
     // initialize 8583 library with custom xml
-    string|file:Error xmlFilePath = file:getAbsolutePath("jposdefv87.xml");
+    string|file:Error xmlFilePath = file:getAbsolutePath("resources/jposdefv87.xml");
     if xmlFilePath is string {
+        log:printInfo("Initializing ISO 8583 library with the configuration file: " + xmlFilePath);
         check iso8583:initialize(xmlFilePath);
     } else {
         log:printWarn("Error occurred while getting the absolute path of the ISO 8583 configuration file. " +

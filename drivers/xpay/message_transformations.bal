@@ -76,26 +76,35 @@ function transformMTI200ToISO20022(iso8583:MTI_0200 mti0200) returns iso20022:FI
     SplmtryData: mapSupplementaryData(mti0200)
 };
 
-function transformPacs002toMTI0210(iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt) returns iso8583:MTI_0210|error => {
-    AccountIdentification1: fiToFiPmtStsRpt.TxInfAndSts?.InstgAgt?.FinInstnId?.Othr?.Id,
+function transformPacs002toMTI0210(iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt, iso8583:MTI_0200 originalMsg) 
+    returns iso8583:MTI_0210|error => {
     MTI: "0210",
-    ProcessingCode: "31xxxx",
-    AmountTransaction: fiToFiPmtStsRpt.GrpHdr.TtlIntrBkSttlmAmt?.\#content.toString(),
-    TransmissionDateTime: check getDateTime(fiToFiPmtStsRpt.GrpHdr.CreDtTm),
-    AcquiringInstitutionIdentificationCode: fiToFiPmtStsRpt.GrpHdr.InstgAgt?.FinInstnId.toString(),
-    CurrencyCodeTransaction: fiToFiPmtStsRpt.GrpHdr.TtlIntrBkSttlmAmt?.Ccy ?: "",
-    DateCapture: check getDate(fiToFiPmtStsRpt.GrpHdr.CreDtTm),
-    LocalTransactionTime: check getTime(fiToFiPmtStsRpt.GrpHdr.CreDtTm),
-    LocalTransactionDate: check getDate(fiToFiPmtStsRpt.GrpHdr.CreDtTm),
-    EftTlvData: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmMtd ?: "",
-    RetrievalReferenceNumber: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmAcct?.Id?.IBAN ?: "",
-    MerchantType: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmAcct?.Id?.Othr?.Id ?: "",
-    PointOfServiceEntryMode: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmAcct?.Id?.Othr?.Id,
-    PointOfServiceConditionCode: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmAcct?.Id?.Othr?.Id ?: "",
-    ReceivingInstitutionIdentificationCode: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmAcct?.Id?.Othr?.Id ?: "",
-    SettlementDate: check getDate(fiToFiPmtStsRpt.GrpHdr.CreDtTm),
-    ResponseCode: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmAcct?.Id?.Othr?.Id ?: "",
-    SystemTraceAuditNumber: fiToFiPmtStsRpt.TxInfAndSts?.OrgnlTxRef?.PmtId?.EndToEndId ?: ""
+    PrimaryAccountNumber: originalMsg.PrimaryAccountNumber ?: (),
+    ProcessingCode: originalMsg.ProcessingCode,
+    AmountTransaction: originalMsg.AmountTransaction,
+    TransmissionDateTime: originalMsg.TransmissionDateTime,
+    SystemTraceAuditNumber: originalMsg.SystemTraceAuditNumber,
+    LocalTransactionTime: originalMsg.LocalTransactionTime,
+    LocalTransactionDate: originalMsg.LocalTransactionDate,
+    SettlementDate: originalMsg.SettlementDate ?: check getDate(fiToFiPmtStsRpt.GrpHdr.CreDtTm), // ME
+    DateCapture: originalMsg.DateCapture ?: check getDate(fiToFiPmtStsRpt.GrpHdr.CreDtTm),
+    MerchantType: originalMsg.MerchantType,
+    PointOfServiceEntryMode: originalMsg.PointOfServiceEntryMode ?: (),
+    PointOfServiceConditionCode: originalMsg.PointOfServiceConditionCode,
+    AcquiringInstitutionIdentificationCode: originalMsg.AcquiringInstitutionIdentificationCode,
+    RetrievalReferenceNumber: originalMsg.RetrievalReferenceNumber,
+    AuthorizationNumber: "123456",
+    ResponseCode: "00",
+    CardAccepterTerminalIdentification: originalMsg.CardAccepterTerminalIdentification ?: (),
+    CardAccepterIdentificationCode: originalMsg.CardAccepterIdentificationCode ?: (),
+    CardAccepterNameLocation: originalMsg.CardAccepterNameLocation ?: (),
+    CurrencyCodeTransaction: originalMsg.CurrencyCodeTransaction,
+    ReceivingInstitutionIdentificationCode: fiToFiPmtStsRpt.GrpHdr.SttlmInf?.SttlmAcct?.Id?.Othr?.Id ?: "9000",
+    AccountIdentification1: originalMsg.AccountIdentification1 ?: fiToFiPmtStsRpt.TxInfAndSts?.InstgAgt?.FinInstnId?.Othr?.Id,
+    AccountIdentification2: originalMsg.AccountIdentification2 ?: fiToFiPmtStsRpt.TxInfAndSts?.InstdAgt?.FinInstnId?.Othr?.Id,
+    EftTlvData: originalMsg.EftTlvData,
+    MessageAuthenticationCode: originalMsg.MessageAuthenticationCode ?: "****"
+     //todo ME 22 38 102 103 128
 };
 
 function transformMTI0800toMTI0810(iso8583:MTI_0800 mti0800) returns iso8583:MTI_0810 => {

@@ -152,7 +152,8 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
                                         + iso20022Response.message()).toBytes();
                                     } else {
                                         // transform to ISO 8583 MTI 0210
-                                        iso8583:MTI_0210|error mti0210msg = transformPacs002toMTI0210(iso20022Response);
+                                        iso8583:MTI_0210|error mti0210msg = 
+                                            transformPacs002toMTI0210(iso20022Response, validatedMsg);
                                         if (mti0210msg is error) {
                                             log:printError("Error while transforming to ISO 8583 MTI 0210: "
                                                     + mti0210msg.message());
