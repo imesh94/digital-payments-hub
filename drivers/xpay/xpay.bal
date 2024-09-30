@@ -168,6 +168,7 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
                                                 + jsonMsg.message()).toBytes();
                                             } else {
                                                 // transform to ISO 8583 message
+                                                log:printDebug("Message to encode: " + jsonMsg.toJsonString());
                                                 string|iso8583:ISOError iso8583Msg = iso8583:encode(jsonMsg);
                                                 if (iso8583Msg is iso8583:ISOError) {
                                                     log:printError("Error occurred while encoding the ISO 8583 message",
@@ -175,6 +176,7 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
                                                     response = ("Error occurred while encoding the ISO 8583 message: "
                                                     + iso8583Msg.message).toBytes();
                                                 } else {
+                                                    log:printDebug("ISO 8583 message encoded successfully : " + iso8583Msg);
                                                     util:Event respondingtoSourceEvenet =
                                                     util:createEvent(correlationId, util:RESPONDING_TO_SOURCE,
                                                             driver.code + "-driver", driver.code + "-network", "success",
@@ -183,6 +185,7 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
                                                     // response = iso8583Msg.toBytes();
                                                     byte[]|error responsebytes = build8583Response(iso8583Msg);
                                                     if responsebytes is byte[] {
+                                                        log:printDebug("Response: " + responsebytes.toString());
                                                         return responsebytes;
                                                     } else {
                                                         log:printError("Error occurred while building the response message: "
@@ -245,6 +248,7 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
             }
         }
     }
+    log:printDebug("Response: " + response.toString());
     return response;
 };
 
@@ -254,7 +258,8 @@ function build8583Response(string msg) returns byte[]|error {
 
     int bitmapCount = countBitmapsFromHexString(msg.substring(4));
     byte[] payload = msg.substring(4 + 16 * bitmapCount).toBytes();
-    byte[] bitmaps = check array:fromBase16(msg.substring(4, 4 + 16 * bitmapCount));
+    // byte[] bitmaps = check array:fromBase16(msg.substring(4, 4 + 16 * bitmapCount));
+    byte[] bitmaps = msg.substring(4, 4 + 16 * bitmapCount).toBytes();
     byte[] versionBytes = "ISO198730           ".toBytes();
     int payloadSize = mti.length() + bitmaps.length() + payload.length() + versionBytes.length();
     string header = payloadSize.toHexString().padZero(8); //todo 8
