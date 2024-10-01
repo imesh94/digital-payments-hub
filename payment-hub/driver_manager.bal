@@ -39,7 +39,7 @@ service /payments\-hub on new http:Listener(port) {
 
     resource function get metadata/[string countryCode]() returns DriverMetadata|http:NotFound {
 
-        log:printInfo("Received metadata request for country code " + countryCode);
+        log:printDebug("Received metadata request for country code " + countryCode);
         DriverMetadata? metadata = self.metadataMap[countryCode];
         if metadata is () {
             return http:NOT_FOUND;
@@ -50,7 +50,7 @@ service /payments\-hub on new http:Listener(port) {
 
     resource function post register(@http:Payload DriverMetadata metadata) returns DriverMetadata {
 
-        log:printInfo("Received driver registration request");
+        log:printDebug("Received driver registration request");
         self.metadataMap[metadata.countryCode] = metadata;
         log:printInfo(metadata.driverName + " driver registered in payments hub with code " + metadata.countryCode);
         return metadata;
