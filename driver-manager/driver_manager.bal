@@ -47,7 +47,7 @@ service /payments\-hub on new http:Listener(port) {
 
     resource function get metadata() returns DriverMetadata[] {
 
-        log:printInfo("Received metadata request for all countries");
+        log:printDebug("Received metadata request for all countries");
         DriverMetadata[] metadataArray = self.metadataMap.toArray();
         return metadataArray;
     }
