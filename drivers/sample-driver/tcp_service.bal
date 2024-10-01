@@ -16,8 +16,10 @@
 
 import ballerina/log;
 import ballerina/tcp;
+import ballerina/uuid;
 
 import digitalpaymentshub/drivers.util;
+
 
 configurable util:DriverConfig driver = ?;
 configurable map<string> payment_hub = ?;
@@ -47,19 +49,19 @@ public service class DriverTCPConnectionService {
     function onBytes(tcp:Caller caller, readonly & byte[] data) returns byte[] {
 
         log:printDebug("Received inbound request");
-        // Publish event
+        string correlationId = uuid:createType4AsString();
 
         // Convert data to iso20022
         json sampleJson = {"data": "sample data"};
 
         // Send to destination driver
         log:printDebug("Forwarding request to destination driver");
-        util:DestinationResponse|error? destinationResponse = util:sendToHub(
+        json|error? destinationResponse = util:sendToHub(
                 "MY", sampleJson, "correlation-id");
-        if (destinationResponse is util:DestinationResponse) {
+        if (destinationResponse is json) {
             log:printDebug(
-                    "Response received from destination driver: " + destinationResponse.responsePayload.toString() +
-                    " CorrelationId: " + destinationResponse.correlationId);
+                    "Response received from destination driver: " + destinationResponse.toString() +
+                    " CorrelationId: " + correlationId);
         } else {
             log:printError("Error occurred while getting response from the destination driver", destinationResponse);
             return self.sendError("errorCode");

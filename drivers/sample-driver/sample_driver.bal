@@ -19,7 +19,7 @@ import ballerina/log;
 
 import digitalpaymentshub/payment_hub as hub;
 
-service /driver on new http:Listener(9093) {
+service /driver\-api on new http:Listener(9093) {
     resource function post payments(@http:Header string x\-correlation\-id, hub:TransactionsRequest payload)
         returns http:Ok {
 
@@ -43,7 +43,7 @@ service /driver on new http:Listener(9093) {
         return response;
     };
 
-    resource function post account/look\-up(@http:Header string x\-correlation\-id,
+    resource function post accounts/look\-up(@http:Header string x\-correlation\-id,
             hub:AccountLookupRequest accountLookupRequest) returns hub:AccountLookupResponse {
 
         log:printDebug("Sample driver received payment request");

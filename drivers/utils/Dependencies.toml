@@ -311,7 +311,7 @@ modules = [
 [[package]]
 org = "digitalpaymentshub"
 name = "drivers.util"
-version = "0.0.14"
+version = "0.0.16"
 dependencies = [
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "lang.runtime"},

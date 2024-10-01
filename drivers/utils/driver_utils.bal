@@ -89,7 +89,7 @@ public function registerDriverAtHub(DriverMetadata driverMetadata) returns error
 # + correlationId - correlation-id to track the transaction
 # + return - response from the destination driver | error
 public function sendToHub(string countryCode, json payload, string correlationId) returns
-    DestinationResponse|error {
+    json|error {
 
     http:Client? destinationClient = httpClientMap[countryCode];
 
@@ -106,7 +106,7 @@ public function sendToHub(string countryCode, json payload, string correlationId
 
         // if (responseStatusCode == 200 && responseCorrelationId is string && responsePayload is json) {
         if (responseStatusCode == 200 && responsePayload is json) {
-            DestinationResponse destinationResponse = {
+            json destinationResponse = {
                 correlationId: correlationId,
                 responsePayload: responsePayload
             };
