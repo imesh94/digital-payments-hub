@@ -15,22 +15,9 @@
 // under the License.
 
 import ballerina/http;
-import ballerina/io;
 import ballerina/log;
 
 configurable int port = 9090;
-
-type Event readonly & record {
-
-    string id;
-    string correlationId;
-    string eventType;
-    string origin;
-    string destination;
-    string eventTimestamp;
-    string status;
-    string errorMessage;
-};
 
 type DriverMetadata readonly & record {
 
@@ -38,8 +25,6 @@ type DriverMetadata readonly & record {
     string countryCode;
     string paymentEndpoint;
 };
-
-EventPublisher eventPublisher = new EventPublisher("./driver-manager-events.log");
 
 service /payments\-hub on new http:Listener(port) {
 
@@ -70,40 +55,4 @@ service /payments\-hub on new http:Listener(port) {
         log:printInfo(metadata.driverName + " driver registered in payments hub with code " + metadata.countryCode);
         return metadata;
     }
-
-    resource function post events(@http:Payload Event event) returns http:Response {
-
-        log:printInfo("Publishing event");
-        http:Response res = new;
-        eventPublisher.publishEvent(event);
-        res.statusCode = http:STATUS_OK;
-        res.setPayload({message: "Event published successfully."});
-        return res;
-    }
-}
-
-public class EventPublisher {
-
-    string filePath;
-
-    function init(string filePath) {
-        self.filePath = filePath;
-    }
-
-    function publishEvent(Event event) {
-
-        json eventJson = event.toJson();
-        string eventJsonString = eventJson.toString();
-        string logEntry = eventJsonString + "\n";
-
-        // Append the log entry to the file
-        io:Error? publishingError = io:fileWriteString(self.filePath, logEntry, io:APPEND);
-
-        if (publishingError is io:Error) {
-            log:printError("Error occurred while publishing event", publishingError);
-        } else {
-            log:printInfo("Event successfully published");
-        }
-    }
-
 }

@@ -14,3 +14,40 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/http;
+import ballerina/log;
+
+service / on new http:Listener(9095) {
+
+    resource function post account\-lookup(AccountLookupRequest payload) returns AccountLookupResponse|ErrorResponse {
+
+        log:printInfo("Received lookup request payload: " + payload.toJsonString());
+
+        // Creating a sample error response
+        ErrorResponse errorResponse = {
+            body: {
+                errorCode: "TXN001",
+                errorDescription: "Invalid transaction format",
+                metadata: {"transactionId": "12345", "field": "amount"}
+            }
+        };
+
+        return errorResponse;
+    }
+
+    resource function post transactions(TransactionsRequest payload) returns ErrorResponse {
+
+        log:printInfo("Received transactions request payload: " + payload.toJsonString());
+
+        // Creating a sample error response
+        ErrorResponse errorResponse = {
+            body: {
+                errorCode: "TXN001",
+                errorDescription: "Invalid transaction format",
+                metadata: {"transactionId": "12345", "field": "amount"}
+            }
+        };
+
+        return errorResponse;
+    }
+}
