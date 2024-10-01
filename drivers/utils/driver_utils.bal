@@ -88,7 +88,7 @@ public function registerDriverAtHub(DriverMetadata driverMetadata) returns error
 # + payload - request payload  
 # + correlationId - correlation-id to track the transaction
 # + return - response from the destination driver | error
-public function sendToDestinationDriver(string countryCode, json payload, string correlationId) returns
+public function sendToHub(string countryCode, json payload, string correlationId) returns
     DestinationResponse|error {
 
     http:Client? destinationClient = httpClientMap[countryCode];

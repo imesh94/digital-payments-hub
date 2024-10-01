@@ -44,30 +44,31 @@ public service class DriverTCPConnectionService {
         self.driverName = driverName;
     }
 
-    function onBytes(tcp:Caller caller, readonly & byte[] data) returns byte[]|error|tcp:Error? {
+    function onBytes(tcp:Caller caller, readonly & byte[] data) returns byte[] {
 
-        log:printInfo("Received inbound request");
+        log:printDebug("Received inbound request");
         // Publish event
 
         // Convert data to iso20022
         json sampleJson = {"data": "sample data"};
 
         // Send to destination driver
-        log:printInfo("Forwarding request to destination driver");
-        util:DestinationResponse|error? destinationResponse = check util:sendToDestinationDriver(
+        log:printDebug("Forwarding request to destination driver");
+        util:DestinationResponse|error? destinationResponse = util:sendToHub(
                 "MY", sampleJson, "correlation-id");
         if (destinationResponse is util:DestinationResponse) {
-            log:printInfo(
+            log:printDebug(
                     "Response received from destination driver: " + destinationResponse.responsePayload.toString() +
                     " CorrelationId: " + destinationResponse.correlationId);
         } else {
             log:printError("Error occurred while getting response from the destination driver", destinationResponse);
+            return self.sendError("errorCode");
         }
 
         // Convert response to iso8583
 
         // Respond
-        log:printInfo("Responding to source");
+        log:printDebug("Responding to source");
         return data;
     }
 
@@ -77,5 +78,10 @@ public service class DriverTCPConnectionService {
 
     function onClose() {
         log:printInfo("Client left");
+    }
+
+    function sendError(string errorCode) returns byte[] {
+        json response = {"error": errorCode};
+        return response.toString().toBytes();
     }
 }

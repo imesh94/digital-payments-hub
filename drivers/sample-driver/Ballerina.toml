@@ -1,7 +1,7 @@
 [package]
 org = "digitalpaymentshub"
 name = "drivers.sampledriver"
-version = "0.0.1"
+version = "0.0.2"
 distribution = "2201.10.0"
 
 [build-options]
@@ -10,5 +10,11 @@ observabilityIncluded = true
 [[dependency]]
 org = "digitalpaymentshub"
 name = "drivers.util"
-version = "0.0.14"
+version = "0.0.15"
 repository = "local"
+
+[[dependency]]
+org = "digitalpaymentshub"
+name = "payment_hub"
+repository = "local"
+version = "0.0.1"

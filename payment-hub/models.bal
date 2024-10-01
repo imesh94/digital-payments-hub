@@ -16,14 +16,14 @@
 
 import ballerina/http;
 
-type AccountLookupRequest record {
+public type AccountLookupRequest record {
     string proxyType;
     string proxyValue;
     string? bicCode;
     map<string> metadata?;
 };
 
-type AccountLookupResponse record {|
+public type AccountLookupResponse record {|
     *http:Ok;
     record {|
         Proxy proxy;
@@ -32,11 +32,11 @@ type AccountLookupResponse record {|
     |} body;
 |};
 
-type TransactionsRequest record {
+public type TransactionsRequest record {
     json data;
 };
 
-type ErrorResponse record {|
+public type ErrorResponse record {|
     *http:BadRequest;
     record {|
         string errorCode;
@@ -45,12 +45,12 @@ type ErrorResponse record {|
     |} body;
 |};
 
-type Proxy record {
+public type Proxy record {
     string 'type;
     string value;
 };
 
-type Account record {
+public type Account record {
     string agentId;
     string name;
     string accountId;
