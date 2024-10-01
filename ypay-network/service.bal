@@ -34,8 +34,8 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
         returns error? {
 
         string xBusinessMsgId = check req.getHeader("X-Business-Message-Id");
-        log:printDebug(string `[YPay Payement Switch] Received a resolution request for proxy: ${proxy} of type: ${proxyType} with business message id: ${xBusinessMsgId}`);
-        log:printDebug(string `[YPay Payement Switch] Received a proxy resolution message [id: ${xBusinessMsgId}].`);
+        log:printDebug(string `[YPay Payment Switch] Received a resolution request for proxy: ${proxy} of type: ${proxyType} with business message id: ${xBusinessMsgId}`);
+        log:printDebug(string `[YPay Payment Switch] Received a proxy resolution message [id: ${xBusinessMsgId}].`);
         time:Utc utcTime = time:utcNow();
         string utcString = time:utcToString(utcTime);
 
@@ -118,7 +118,7 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
                 OrgnlMsgNmId: ""
             }
         };
-        log:printDebug(string `[YPay Payement Switch] Responding to the proxy resolution message [id: ${xBusinessMsgId}]. ${"\n"} Message: ${"\n"} ${response.toJsonString()}`);
+        log:printDebug(string `[YPay Payment Switch] Responding to the proxy resolution message [id: ${xBusinessMsgId}].`, Message = response.toJson());
         check caller->respond(response);
     }
 
@@ -126,7 +126,7 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
 
         string xBusinessMsgId = check req.getHeader("X-Business-Message-Id");
         json payload = check req.getJsonPayload();
-        log:printDebug(string `[YPay Payement Switch] Received a fund transfer message [id: ${xBusinessMsgId}]. ${"\n"} Message: ${"\n"} ${payload.toJsonString()}`);
+        log:printDebug(string `[YPay Payment Switch] Received a fund transfer message [id: ${xBusinessMsgId}].`, Message = payload);
         models:FundTransfer fundTransferPayload = check jsondata:parseAsType(payload);
         models:FundTransferResponse response = {
             data: {
@@ -137,7 +137,7 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
                 registrationId: "0075800039"
             }
         };
-        log:printDebug(string `[YPay Payement Switch] Responding to the fund transfer message [id: ${xBusinessMsgId}]. ${"\n"} Message: ${"\n"} ${response.toJsonString()}`);
+        log:printDebug(string `[YPay Payment Switch] Responding to the fund transfer message [id: ${xBusinessMsgId}].`, Message = response.toJson());
         check caller->respond(response);
     }
 }
