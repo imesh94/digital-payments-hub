@@ -34,8 +34,8 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
         returns error? {
 
         string xBusinessMsgId = check req.getHeader("X-Business-Message-Id");
-        log:printInfo("Received a resolution request for proxy: " + proxy + " of type: " + proxyType +
-                " with business message ID: " + xBusinessMsgId);
+        log:printDebug(string `[YPay Payement Switch] Received a resolution request for proxy: ${proxy} of type: ${proxyType} with business message id: ${xBusinessMsgId}`);
+        log:printDebug(string `[YPay Payement Switch] Received a proxy resolution message [id: ${xBusinessMsgId}].`);
         time:Utc utcTime = time:utcNow();
         string utcString = time:utcToString(utcTime);
 
@@ -69,63 +69,65 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
                         Tp: proxyType,
                         Val: proxy
                     },
-                Regn: [
-                    {
-                        RegnId: "0075800025",
-                        DsplNm: "Bank Account",
-                        Agt: {
-                            FinInstnId: {
-                                Othr: {
-                                    Id: "AIBMMYKLXXX"
-                                }
-                            }
-                        },
-                        Acct: {
-                            Id: {
-                                Othr: {
-                                    Id: "111222333444"
+                    Regn: [
+                        {
+                            RegnId: "0075800025",
+                            DsplNm: "Bank Account",
+                            Agt: {
+                                FinInstnId: {
+                                    Othr: {
+                                        Id: "AIBMMYKLXXX"
+                                    }
                                 }
                             },
-                            Nm: "ACCOUNT1"
+                            Acct: {
+                                Id: {
+                                    Othr: {
+                                        Id: "111222333444"
+                                    }
+                                },
+                                Nm: "ACCOUNT1"
+                            },
+                            PreAuthrsd: ""
                         },
-                        PreAuthrsd: ""
-                    },
-                    {
-                        RegnId: "0075800025",
-                        DsplNm: "Bank Account",
-                        Agt: {
-                            FinInstnId: {
-                                Othr: {
-                                    Id: "AIBMMYKLXXX"
-                                }
-                            }
-                        },
-                        Acct: {
-                            Id: {
-                                Othr: {
-                                    Id: "555666777888"
+                        {
+                            RegnId: "0075800025",
+                            DsplNm: "Bank Account",
+                            Agt: {
+                                FinInstnId: {
+                                    Othr: {
+                                        Id: "AIBMMYKLXXX"
+                                    }
                                 }
                             },
-                            Nm: "ACCOUNT2"
-                        },
-                        PreAuthrsd: ""
-                    }
-                ]}
+                            Acct: {
+                                Id: {
+                                    Othr: {
+                                        Id: "555666777888"
+                                    }
+                                },
+                                Nm: "ACCOUNT2"
+                            },
+                            PreAuthrsd: ""
+                        }
+                    ]
+                }
             },
             OrgnlGrpInf: {
                 OrgnlMsgId: xBusinessMsgId,
                 OrgnlMsgNmId: ""
             }
         };
+        log:printDebug(string `[YPay Payement Switch] Responding to the proxy resolution message [id: ${xBusinessMsgId}]. ${"\n"} Message: ${"\n"} ${response.toJsonString()}`);
         check caller->respond(response);
     }
 
     isolated resource function post register(http:Caller caller, http:Request req) returns error? {
 
-        json payload = check req.getJsonPayload();
-        log:printInfo("Received a registration request with payload: " + payload.toString());
-        models:FundTransfer fundTransferPayload = check jsondata:parseAsType(payload);
         string xBusinessMsgId = check req.getHeader("X-Business-Message-Id");
+        json payload = check req.getJsonPayload();
+        log:printDebug(string `[YPay Payement Switch] Received a fund transfer message [id: ${xBusinessMsgId}]. ${"\n"} Message: ${"\n"} ${payload.toJsonString()}`);
+        models:FundTransfer fundTransferPayload = check jsondata:parseAsType(payload);
         models:FundTransferResponse response = {
             data: {
                 businessMessageId: xBusinessMsgId,
@@ -135,6 +137,7 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
                 registrationId: "0075800039"
             }
         };
+        log:printDebug(string `[YPay Payement Switch] Responding to the fund transfer message [id: ${xBusinessMsgId}]. ${"\n"} Message: ${"\n"} ${response.toJsonString()}`);
         check caller->respond(response);
     }
 }
