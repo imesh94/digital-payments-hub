@@ -34,3 +34,9 @@ generated/
 # Contains configuration values used during development time.
 # See https://ballerina.io/learn/provide-values-to-configurable-variables/ for more details.
 Dependencies.toml
+
+# Ignore system files
+.DS_Store
+
+# Ignore IDE files
+.vscode/
