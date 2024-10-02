@@ -18,5 +18,5 @@ public type DriverMetadata readonly & record {
 
     string driverName;
     string countryCode;
-    string paymentEndpoint;
+    string paymentsEndpoint;
 };
