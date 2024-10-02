@@ -19,7 +19,7 @@ import ballerina/http;
 public type AccountLookupRequest record {
     string proxyType;
     string proxyValue;
-    string? bicCode;
+    string bicCode?;
     map<string> metadata?;
 };
 
@@ -36,14 +36,11 @@ public type TransactionsRequest record {
     json data;
 };
 
-public type ErrorResponse record {|
-    *http:BadRequest;
-    record {|
-        string errorCode;
-        string errorDescription;
-        map<string> metadata?;
-    |} body;
-|};
+type ErrorResponse record {
+    int statusCode;
+    string errorCode;
+    string errorDescription;
+};
 
 public type Proxy record {
     string 'type;
