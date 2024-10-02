@@ -18,29 +18,41 @@ import ballerina/http;
 import ballerina/log;
 
 configurable int port = 9090;
+map<DriverMetadata> metadataMap = {};
 
 type DriverMetadata readonly & record {
 
     string driverName;
     string countryCode;
-    string paymentEndpoint;
+    string paymentsEndpoint;
 };
 
-service /payments\-hub on new http:Listener(port) {
+# Return payments endpoint corresponding to the given country code.
+#
+# + countryCode - two character country code
+# + return - payments endpoint
+public function getPaymentsEndpointForCountry(string countryCode) returns string {
+    DriverMetadata? metadata = metadataMap[countryCode];
 
-    map<DriverMetadata> metadataMap = {};
+    if (metadata is DriverMetadata) {
+        return metadata.paymentsEndpoint;
+    }
+    return "";
+}
+
+service /payments\-hub on new http:Listener(port) {
 
     resource function get metadata() returns DriverMetadata[] {
 
         log:printDebug("Received metadata request for all countries");
-        DriverMetadata[] metadataArray = self.metadataMap.toArray();
+        DriverMetadata[] metadataArray = metadataMap.toArray();
         return metadataArray;
     }
 
     resource function get metadata/[string countryCode]() returns DriverMetadata|http:NotFound {
 
         log:printDebug("Received metadata request for country code " + countryCode);
-        DriverMetadata? metadata = self.metadataMap[countryCode];
+        DriverMetadata? metadata = metadataMap[countryCode];
         if metadata is () {
             return http:NOT_FOUND;
         } else {
@@ -51,7 +63,7 @@ service /payments\-hub on new http:Listener(port) {
     resource function post register(@http:Payload DriverMetadata metadata) returns DriverMetadata {
 
         log:printDebug("Received driver registration request");
-        self.metadataMap[metadata.countryCode] = metadata;
+        metadataMap[metadata.countryCode] = metadata;
         log:printInfo(metadata.driverName + " driver registered in payments hub with code " + metadata.countryCode);
         return metadata;
     }

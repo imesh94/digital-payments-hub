@@ -17,37 +17,132 @@
 import ballerina/http;
 import ballerina/log;
 
-service / on new http:Listener(9095) {
+service /payment\-hub\-api on new http:Listener(9095) {
 
-    resource function post account\-lookup(AccountLookupRequest payload) returns AccountLookupResponse|ErrorResponse {
+    resource function post cross\-border/payments(@http:Header string Country\-Code, TransactionsRequest payload)
+        returns json {
 
-        log:printInfo("Received lookup request payload: " + payload.toJsonString());
-
-        // Creating a sample error response
-        ErrorResponse errorResponse = {
-            body: {
-                errorCode: "TXN001",
-                errorDescription: "Invalid transaction format",
-                metadata: {"transactionId": "12345", "field": "amount"}
-            }
-        };
-
-        return errorResponse;
+        log:printDebug("Received payment request payload: " + payload.toJsonString());
+        json responseJson = sendPaymentRequestToTargetDriver(Country\-Code, payload);
+        return responseJson;
     }
 
-    resource function post transactions(TransactionsRequest payload) returns ErrorResponse {
+    resource function post cross\-border/accounts/look\-up(@http:Header string Country\-Code,
+            AccountLookupRequest payload) returns json|AccountLookupResponse|ErrorResponse {
 
-        log:printInfo("Received transactions request payload: " + payload.toJsonString());
-
-        // Creating a sample error response
-        ErrorResponse errorResponse = {
-            body: {
-                errorCode: "TXN001",
-                errorDescription: "Invalid transaction format",
-                metadata: {"transactionId": "12345", "field": "amount"}
-            }
-        };
-
-        return errorResponse;
+        // ToDo : Return lookup response
+        log:printDebug("Received lookup request payload: " + payload.toJsonString());
+        json responseJson = sendLookupRequestToTargetDriver(Country\-Code, payload);
+        return responseJson;
     }
 }
+
+# Send payment message to target driver and get the response.
+#
+# + countryCode - country code of the target driver  
+# + payload - request payload  
+# + return - response from the destination driver | error response
+function sendPaymentRequestToTargetDriver(string countryCode, TransactionsRequest payload)
+    returns json {
+
+    http:Request request = new;
+    request.setHeader("Content-Type", "application/json");
+    request.setPayload(payload.data);
+
+    string paymentsEndpoint = getPaymentsEndpointForCountry(countryCode);
+    // ToDo: Cache http clients
+    http:Client|error targetHttpClient = new (paymentsEndpoint);
+    if (targetHttpClient is http:Client) {
+        http:Response|http:ClientError response = targetHttpClient->/.post(request);
+
+        if (response is http:Response) {
+            int responseStatusCode = response.statusCode;
+            json|http:ClientError responsePayload = response.getJsonPayload();
+
+            if (responseStatusCode == 200 && responsePayload is json) {
+                return responsePayload;
+            } else if (responsePayload is json) {
+                log:printError("Error returned from the target driver");
+                log:printDebug(responsePayload.toJsonString());
+                return responsePayload;
+            } else {
+                log:printError("Error occurred while forwarding request to the destination driver");
+                json errorResponse = {
+                    "error": "Error occurred while processing response",
+                    "statusCode": responseStatusCode
+                };
+                return errorResponse;
+            }
+        } else {
+            log:printError("Client error occurred while sending request");
+            json clientErrorResponse = {
+                "error": "Failed to get a valid response from the target",
+                "details": response.message()
+            };
+            return clientErrorResponse;
+        }
+
+    } else {
+        // TargetHttpClient is not initialized properly
+        log:printError("Error creating HTTP client for the target");
+        json clientInitError = {"error": "Failed to initialize client", "details": targetHttpClient.message()};
+        return clientInitError;
+    }
+}
+
+# Send lookup message to target driver and get the response.
+#
+# + countryCode - country code of the target driver  
+# + payload - request payload  
+# + return - response from the destination driver | error response
+function sendLookupRequestToTargetDriver(string countryCode, AccountLookupRequest payload)
+    returns json {
+
+    http:Request request = new;
+    request.setHeader("Content-Type", "application/json");
+    request.setPayload(payload.toJson());
+
+    string paymentsEndpoint = getPaymentsEndpointForCountry(countryCode);
+    // ToDo: Cache http clients
+    http:Client|error targetHttpClient = new (paymentsEndpoint);
+    if (targetHttpClient is http:Client) {
+        http:Response|http:ClientError response = targetHttpClient->/.post(request);
+
+        if (response is http:Response) {
+            int responseStatusCode = response.statusCode;
+            json|http:ClientError responsePayload = response.getJsonPayload();
+
+            if (responseStatusCode == 200 && responsePayload is json) {
+                return responsePayload;
+            } else if (responsePayload is json) {
+                log:printError("Error returned from the target driver");
+                log:printDebug(responsePayload.toJsonString());
+                return responsePayload;
+            } else {
+                log:printError("Error occurred while forwarding request to the destination driver");
+                json errorResponse = {
+                    "error": "Error occurred while processing response",
+                    "statusCode": responseStatusCode
+                };
+                return errorResponse;
+            }
+        } else {
+            log:printError("Client error occurred while sending request");
+            json clientErrorResponse = {
+                "error": "Failed to get a valid response from the target",
+                "details": response.message()
+            };
+            return clientErrorResponse;
+        }
+
+    } else {
+        // TargetHttpClient is not initialized properly
+        log:printError("Error creating HTTP client for the target");
+        json clientInitError = {"error": "Failed to initialize client", "details": targetHttpClient.message()};
+        return clientInitError;
+    }
+}
+
+//function getAccountLookupResponseFromJson(json lookupResponse) returns AccountLookupResponse {
+// ToDo
+//}
