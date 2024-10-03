@@ -14,56 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// public type DriverConfig record {|
-//     DriverRegisterModel driverInfo;
-//     InboundConfig inbound;
-//     OutboundConfig outbound;
-// |};
-
-// public type InboundConfig readonly & record {|
-//     string transport;
-//     string host;
-//     int port;
-// |};
-
-// // Structure for the outbound configuration
-// public type OutboundConfig readonly & record {|
-//     string transport;
-//     string host;
-//     int port;
-// |};
-
-
-// public type PaymentsHubConfig readonly & record {|
-//     string url;
-// |};
-
-// [driver]
-// name = "sample_driver"
-// code = "SD1"
-
-// # inbound url of the driver
-// [driver.inbound]
-// transport = "tcp"
-// host = "localhost"
-// port = 8084
-
-// # url of the country switch
-// [driver.outbound]
-// transport = "tcp"
-// host = "localhost"
-// port = 8300
-
-// # hub facing api of the driver
-// [driver.driver_api]
-// host = "localhost"
-// port = 9090
-// gateway_url = "http://localhost:9090"
-
-// # url of the payments hub
-// [payments_hub]
-// baseUrl = "http://localhost:9100"
-
 public type DriverConfig record {|
     string name;
     string code;
