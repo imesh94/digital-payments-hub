@@ -1,0 +1,150 @@
+openapi: 3.0.1
+info:
+  title: Driver Api
+  version: 0.0.2
+servers:
+  - url: '{server}:{port}/driver-api'
+    variables:
+      server:
+        default: http://localhost
+      port:
+        default: '9093'
+paths:
+  /payments:
+    post:
+      operationId: postPayments
+      parameters:
+        - name: x-correlation-id
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionsRequest'
+        required: true
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /accounts/look-up:
+    post:
+      operationId: postAccountsLookUp
+      parameters:
+        - name: x-correlation-id
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountLookupRequest'
+        required: true
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                required:
+                  - account
+                  - proxy
+                type: object
+                properties:
+                  proxy:
+                    $ref: '#/components/schemas/Proxy'
+                  account:
+                    $ref: '#/components/schemas/Account'
+                  metadata:
+                    type: object
+                    additionalProperties:
+                      type: string
+                additionalProperties: false
+        '400':
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+components:
+  schemas:
+    Account:
+      required:
+        - accountId
+        - agentId
+        - name
+      type: object
+      properties:
+        agentId:
+          type: string
+        name:
+          type: string
+        accountId:
+          type: string
+    AccountLookupRequest:
+      required:
+        - bicCode
+        - proxyType
+        - proxyValue
+      type: object
+      properties:
+        proxyType:
+          type: string
+        proxyValue:
+          type: string
+        bicCode:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+    ErrorPayload:
+      required:
+        - message
+        - method
+        - path
+        - reason
+        - status
+        - timestamp
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int64
+        reason:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        method:
+          type: string
+    Proxy:
+      required:
+        - type
+        - value
+      type: object
+      properties:
+        type:
+          type: string
+        value:
+          type: string
+    TransactionsRequest:
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: object
