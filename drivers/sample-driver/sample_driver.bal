@@ -16,11 +16,11 @@
 
 import ballerina/http;
 import ballerina/log;
+import digitalpaymentshub/payments_hub.models;
 
-import digitalpaymentshub/payment_hub as hub;
 
 service /driver\-api on new http:Listener(9093) {
-    resource function post payments(@http:Header string x\-correlation\-id, hub:TransactionsRequest payload)
+    resource function post payments(@http:Header string x\-correlation\-id, models:TransactionsRequest payload)
         returns http:Ok {
 
         log:printDebug("Sample driver received payment request");
@@ -44,7 +44,7 @@ service /driver\-api on new http:Listener(9093) {
     };
 
     resource function post accounts/look\-up(@http:Header string x\-correlation\-id,
-            hub:AccountLookupRequest accountLookupRequest) returns hub:AccountLookupResponse {
+            models:AccountLookupRequest accountLookupRequest) returns models:AccountLookupResponse {
 
         log:printDebug("Sample driver received payment request");
         string correlationId = x\-correlation\-id;
@@ -55,7 +55,7 @@ service /driver\-api on new http:Listener(9093) {
         log:printDebug("Sending request to the payment network");
 
         log:printDebug("Received response from the payment network");
-        hub:AccountLookupResponse accountLookupResponse = {
+        models:AccountLookupResponse accountLookupResponse = {
             headers: {"correlationId": correlationId},
             body: {
                 proxy: {

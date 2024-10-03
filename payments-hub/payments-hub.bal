@@ -16,10 +16,11 @@
 
 import ballerina/http;
 import ballerina/log;
+import payments_hub.models;
 
 service /payment\-hub\-api on new http:Listener(9095) {
 
-    resource function post cross\-border/payments(@http:Header string Country\-Code, TransactionsRequest payload)
+    resource function post cross\-border/payments(@http:Header string Country\-Code, models:TransactionsRequest payload)
         returns json {
 
         log:printDebug("Received payment request payload: " + payload.toJsonString());
@@ -28,7 +29,7 @@ service /payment\-hub\-api on new http:Listener(9095) {
     }
 
     resource function post cross\-border/accounts/look\-up(@http:Header string Country\-Code,
-            AccountLookupRequest payload) returns json|AccountLookupResponse|ErrorResponse {
+            models:AccountLookupRequest payload) returns json|models:AccountLookupResponse|models:ErrorResponse {
 
         // ToDo : Return lookup response
         log:printDebug("Received lookup request payload: " + payload.toJsonString());
@@ -42,7 +43,7 @@ service /payment\-hub\-api on new http:Listener(9095) {
 # + countryCode - country code of the target driver  
 # + payload - request payload  
 # + return - response from the destination driver | error response
-function sendPaymentRequestToTargetDriver(string countryCode, TransactionsRequest payload)
+function sendPaymentRequestToTargetDriver(string countryCode, models:TransactionsRequest payload)
     returns json {
 
     http:Request request = new;
@@ -95,7 +96,7 @@ function sendPaymentRequestToTargetDriver(string countryCode, TransactionsReques
 # + countryCode - country code of the target driver  
 # + payload - request payload  
 # + return - response from the destination driver | error response
-function sendLookupRequestToTargetDriver(string countryCode, AccountLookupRequest payload)
+function sendLookupRequestToTargetDriver(string countryCode, models:AccountLookupRequest payload)
     returns json {
 
     http:Request request = new;

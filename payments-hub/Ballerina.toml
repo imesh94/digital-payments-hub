@@ -1,10 +1,11 @@
 [package]
 org = "digitalpaymentshub"
 name = "payments_hub"
-version = "0.0.2"
+version = "0.0.12"
 distribution = "2201.10.0"
 authors = ["Ballerina"]
 visibility="private"
+export=["payments_hub", "payments_hub.models"]
 
 [[dependency]]
 org = "ballerinax"

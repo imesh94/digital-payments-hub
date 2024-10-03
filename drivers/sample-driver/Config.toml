@@ -1,15 +1,25 @@
 [driver]
 name = "sample_driver"
 code = "SD1"
+
+# inbound url of the driver
 [driver.inbound]
 transport = "tcp"
-port = 8085
-[driver.outbound]
 host = "localhost"
-port = 9093
+port = 8084
 
-[payment_hub]
-baseUrl = "http://localhost:9090"
+# url of the country switch
+[driver.outbound]
+transport = "tcp"
+host = "localhost"
+port = 8300
 
-[payment_network]
-baseUrl = "http://localhost:9590"
+# hub facing api of the driver
+[driver.driver_api]
+host = "localhost"
+port = 9090
+gateway_url = "http://localhost:9090"
+
+# url of the payments hub
+[payments_hub]
+base_url = "http://localhost:9100"

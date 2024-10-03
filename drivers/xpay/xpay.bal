@@ -53,10 +53,9 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
     string hex = array:toBase16(data);
     log:printDebug("Received message from the network driver: " + hex);
     log:printDebug("Recieived data string: " + data.toString());
-    int headerLength = 8; // todo 4 for lankapay
-    int versionNameLength = 40; // todo 20 for LankaPay
+    int headerLength = 8;
+    int versionNameLength = 40;
     int mtiLLength = 8;
-    //int buffer = 0;
     int nextIndex = headerLength + versionNameLength;
     // let's convert all to the original hex representation. Even though this is a string,
     // it represents the actual hexa decimal encoded byte stream.
@@ -217,7 +216,6 @@ public function handleInbound(byte[] & readonly data) returns byte[] {
                 TYPE_MTI_0800 => {
                     log:printInfo("MTI 0800 message received");
                     iso8583:MTI_0800|error validatedMsg = constraint:validate(parsedISO8583Msg);
-                    // iso8583:MTI_0800|error validatedMsg = parsedISO8583Msg.cloneWithType(iso8583:MTI_0800);
                     if (validatedMsg is error) {
                         log:printError("Error while validating incoming message: " + validatedMsg.message());
                         response = ("Error while validating: " + validatedMsg.toBalString()).toBytes();
@@ -270,7 +268,6 @@ function build8583Response(string msg) returns byte[]|error {
     byte[] headerBytes = check array:fromBase16(header);
 
     return [...headerBytes, ...versionBytes, ...mti, ...bitmaps, ...payload];
-    // return [...mti, ...bitmaps, ...payload];
 }
 
 function countBitmapsFromHexString(string data) returns int|error {
