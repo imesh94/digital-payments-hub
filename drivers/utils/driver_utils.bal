@@ -186,15 +186,15 @@ public function createEvent(string correlationId, EventType eventType, string or
 #
 # + driverName - name of the driver  
 # + countryCode - country code of the driver  
-# + paymentEndpoint - payments endpoint which can be called by source drivers
+# + paymentsEndpoint - payments endpoint which can be called by source drivers
 # + return - populated driver metadata record
-public function createDriverMetadata(string driverName, string countryCode, string paymentEndpoint)
+public function createDriverMetadata(string driverName, string countryCode, string paymentsEndpoint)
     returns DriverMetadata {
 
     DriverMetadata driverMetadata = {
         driverName: driverName,
         countryCode: countryCode,
-        paymentEndpoint: paymentEndpoint
+        paymentsEndpoint: paymentsEndpoint
     };
 
     return driverMetadata;
@@ -283,7 +283,7 @@ class DestinationClientInitializationJob {
             httpClientMap.removeAll();
             foreach var metadata in metadataList {
                 string countryCode = metadata.countryCode;
-                http:Client|error destinationHttpClient = new (metadata.paymentEndpoint);
+                http:Client|error destinationHttpClient = new (metadata.paymentsEndpoint);
                 // Add the client to the map with countryCode as the key
                 if (destinationHttpClient is http:Client) {
                     httpClientMap[countryCode] = destinationHttpClient;
