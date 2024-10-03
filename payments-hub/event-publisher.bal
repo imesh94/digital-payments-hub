@@ -19,6 +19,7 @@ import ballerina/log;
 import ballerina/time;
 import ballerina/uuid;
 import ballerinax/kafka;
+import payments_hub.models;
 
 public class KafkaEventPublisher {
 
@@ -29,7 +30,7 @@ public class KafkaEventPublisher {
         self.kafkaPublisher = check new (kafka:DEFAULT_URL);
     }
 
-    function publishEvent(EventType eventType, string origin, string destination, string correlationId) {
+    function publishEvent(models:EventType eventType, string origin, string destination, string correlationId) {
 
         string eventJson = createEventJson(eventType, origin, destination, correlationId).toString();
 
@@ -53,7 +54,7 @@ public class FileEventPublisher {
         self.filePath = filePath;
     }
 
-    function publishEvent(EventType eventType, string origin, string destination, string correlationId) {
+    function publishEvent(models:EventType eventType, string origin, string destination, string correlationId) {
 
         json eventJson = createEventJson(eventType, origin, destination, correlationId);
         string eventJsonString = eventJson.toString();
@@ -71,7 +72,7 @@ public class FileEventPublisher {
 
 }
 
-function createEventJson(EventType eventType, string origin, string destination, string correlationId)
+function createEventJson(models:EventType eventType, string origin, string destination, string correlationId)
     returns json {
 
     string timestamp = time:utcNow().toString();

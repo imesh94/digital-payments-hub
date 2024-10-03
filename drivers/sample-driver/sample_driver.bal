@@ -16,46 +16,59 @@
 
 import ballerina/http;
 import ballerina/log;
+import digitalpaymentshub/payments_hub.models;
 
-import digitalpaymentshub/drivers.util;
 
-service / on new http:Listener(9093) {
-    resource function post inbound_payload(http:Caller caller, http:Request req) returns error? {
+service /driver\-api on new http:Listener(9093) {
+    resource function post payments(@http:Header string x\-correlation\-id, models:TransactionsRequest payload)
+        returns http:Ok {
 
-        log:printInfo("Sample driver received payment request");
-        string|http:HeaderNotFoundError correlationIdHeader = req.getHeader("X-Correlation-ID");
-        string correlationId = "N/A";
-
-        if (correlationIdHeader is string) {
-            correlationId = correlationIdHeader;
-        }
-
-        // Publish event
-        util:Event receivedEvent = util:createEvent(correlationId, util:RECEIVED_FROM_SOURCE_DRIVER,
-                "sample-origin", "sample-destination", "success", "N/A");
-        util:publishEvent(receivedEvent);
-        //createEvent(string correlationId, EventType eventType, string origin, string destination,
-        //string eventTimestamp, string status, string errorMessage)
+        log:printDebug("Sample driver received payment request");
+        string correlationId = x\-correlation\-id;
 
         // Send request to payment network
-        log:printInfo("Sending request to the payment network");
+        log:printDebug("Sending request to the payment network");
 
-        log:printInfo("Received response from the payment network");
+        log:printDebug("Received response from the payment network");
         json paymentNetworkResponse = {
             "status": "success",
             "message": "Payment processed successfully"
         };
-
-        http:Response res = new;
-        res.setPayload(paymentNetworkResponse);
-
-        // Add the X-Correlation-ID header to the response if present
-        if correlationId is string {
-            res.setHeader("X-Correlation-ID", correlationId);
-        }
-        res.statusCode = 200;
+        http:Ok response = {
+            body: paymentNetworkResponse,
+            headers: {"correlationId": correlationId}
+        };
         // Return response
-        log:printInfo("Responding to the source driver");
-        check caller->respond(res);
+        log:printDebug("Responding to the source driver");
+        return response;
+    };
+
+    resource function post accounts/look\-up(@http:Header string x\-correlation\-id,
+            models:AccountLookupRequest accountLookupRequest) returns models:AccountLookupResponse {
+
+        log:printDebug("Sample driver received payment request");
+        string correlationId = x\-correlation\-id;
+
+        string proxyType = accountLookupRequest.proxyType;
+        string proxyValue = accountLookupRequest.proxyValue;
+        // Send request to payment network
+        log:printDebug("Sending request to the payment network");
+
+        log:printDebug("Received response from the payment network");
+        models:AccountLookupResponse accountLookupResponse = {
+            headers: {"correlationId": correlationId},
+            body: {
+                proxy: {
+                    'type: proxyType,
+                    value: proxyValue
+                },
+                account: {
+                    agentId: "12345",
+                    name: "John Doe",
+                    accountId: "1234567890"
+                }
+            }
+        };
+        return accountLookupResponse;
     };
 }

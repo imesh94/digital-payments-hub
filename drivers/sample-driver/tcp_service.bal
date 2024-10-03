@@ -16,21 +16,29 @@
 
 import ballerina/log;
 import ballerina/tcp;
+import ballerina/uuid;
 
-import digitalpaymentshub/drivers.util;
+import digitalpaymentshub/drivers.utils;
+import digitalpaymentshub/payments_hub.models;
 
-configurable util:DriverConfig driver = ?;
-configurable map<string> payment_hub = ?;
-configurable map<string> payment_network = ?;
+
+configurable models:DriverConfig driver = ?;
+configurable models:PaymentsHubConfig payments_hub = ?;
 
 public function main() returns error? {
 
-    string driverOutboundBaseUrl = "http://" + driver.outbound.host + ":" + driver.outbound.port.toString();
-    util:DriverMetadata driverMetadata = util:createDriverMetadata(driver.name, driver.code, driverOutboundBaseUrl);
-    check util:registerDriverAtHub(driverMetadata);
-    check util:initializeDriverListeners(driver, new DriverTCPConnectionService(driver.name));
-    check util:initializeDriverHttpClients(payment_hub["baseUrl"], payment_network["baseUrl"]);
-    check util:initializeDestinationDriverClients();
+    string driverGatewayUrl = driver.driver_api.gateway_url;
+    
+    models:AccountsLookUp[] accountsLookUp = [
+        { 'type: "MBNO", description: "Mobile Number" },
+        { 'type: "NIC", description: "National Identity Card Number" }
+    ];
+    models:DriverRegisterModel driverMetadata = utils:createDriverRegisterModel(driver.name, driver.code, 
+        accountsLookUp, driverGatewayUrl);
+    check utils:registerDriverAtHub(driverMetadata);
+    check utils:initializeDriverListeners(driver, new DriverTCPConnectionService(driver.name));
+    check utils:initializeHubClient(payments_hub.base_url);
+    //todo initialize outbound client
 }
 
 public service class DriverTCPConnectionService {
@@ -44,30 +52,31 @@ public service class DriverTCPConnectionService {
         self.driverName = driverName;
     }
 
-    function onBytes(tcp:Caller caller, readonly & byte[] data) returns byte[]|error|tcp:Error? {
+    function onBytes(tcp:Caller caller, readonly & byte[] data) returns byte[] {
 
-        log:printInfo("Received inbound request");
-        // Publish event
+        log:printDebug("Received inbound request");
+        string correlationId = uuid:createType4AsString();
 
         // Convert data to iso20022
         json sampleJson = {"data": "sample data"};
 
         // Send to destination driver
-        log:printInfo("Forwarding request to destination driver");
-        util:DestinationResponse|error? destinationResponse = check util:sendToDestinationDriver(
+        log:printDebug("Forwarding request to destination driver");
+        json|error? destinationResponse = utils:sendToHub(
                 "MY", sampleJson, "correlation-id");
-        if (destinationResponse is util:DestinationResponse) {
-            log:printInfo(
-                    "Response received from destination driver: " + destinationResponse.responsePayload.toString() +
-                    " CorrelationId: " + destinationResponse.correlationId);
+        if (destinationResponse is json) {
+            log:printDebug(
+                    "Response received from destination driver: " + destinationResponse.toString() +
+                    " CorrelationId: " + correlationId);
         } else {
             log:printError("Error occurred while getting response from the destination driver", destinationResponse);
+            return self.sendError("errorCode");
         }
 
         // Convert response to iso8583
 
         // Respond
-        log:printInfo("Responding to source");
+        log:printDebug("Responding to source");
         return data;
     }
 
@@ -77,5 +86,10 @@ public service class DriverTCPConnectionService {
 
     function onClose() {
         log:printInfo("Client left");
+    }
+
+    function sendError(string errorCode) returns byte[] {
+        json response = {"error": errorCode};
+        return response.toString().toBytes();
     }
 }

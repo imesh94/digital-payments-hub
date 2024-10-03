@@ -14,8 +14,3 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public type DestinationResponse record {
-
-    string correlationId;
-    json responsePayload;
-};
