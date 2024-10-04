@@ -16,8 +16,8 @@
 
 import ballerina/http;
 import ballerina/log;
-import digitalpaymentshub/payments_hub.models;
 
+import digitalpaymentshub/payments_hub.models;
 
 service /driver\-api on new http:Listener(9093) {
     resource function post payments(@http:Header string x\-correlation\-id, models:TransactionsRequest payload)

@@ -14,29 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/http;
-import ballerina/log;
 import payments_hub.models;
 
-service /payment\-hub\-api on new http:Listener(9095) {
-
-    resource function post cross\-border/payments(@http:Header string Country\-Code, models:TransactionsRequest payload)
-        returns json {
-
-        log:printDebug("Received payment request payload: " + payload.toJsonString());
-        json responseJson = sendPaymentRequestToTargetDriver(Country\-Code, payload);
-        return responseJson;
-    }
-
-    resource function post cross\-border/accounts/look\-up(@http:Header string Country\-Code,
-            models:AccountLookupRequest payload) returns json|models:AccountLookupResponse|models:ErrorResponse {
-
-        // ToDo : Return lookup response
-        log:printDebug("Received lookup request payload: " + payload.toJsonString());
-        json responseJson = sendLookupRequestToTargetDriver(Country\-Code, payload);
-        return responseJson;
-    }
-}
+import ballerina/http;
+import ballerina/log;
 
 # Send payment message to target driver and get the response.
 #

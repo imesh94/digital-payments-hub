@@ -21,23 +21,22 @@ import ballerina/uuid;
 import digitalpaymentshub/drivers.utils;
 import digitalpaymentshub/payments_hub.models;
 
-
 configurable models:DriverConfig driver = ?;
 configurable models:PaymentsHubConfig payments_hub = ?;
 
 public function main() returns error? {
 
     string driverGatewayUrl = driver.driver_api.gateway_url;
-    
+
     models:AccountsLookUp[] accountsLookUp = [
-        { 'type: "MBNO", description: "Mobile Number" },
-        { 'type: "NIC", description: "National Identity Card Number" }
+        {'type: "MBNO", description: "Mobile Number"},
+        {'type: "NIC", description: "National Identity Card Number"}
     ];
-    models:DriverRegisterModel driverMetadata = utils:createDriverRegisterModel(driver.name, driver.code, 
-        accountsLookUp, driverGatewayUrl);
-    check utils:registerDriverAtHub(driverMetadata);
+    models:DriverRegisterModel driverMetadata = utils:createDriverRegisterModel(driver.name, driver.code,
+            accountsLookUp, driverGatewayUrl);
     check utils:initializeDriverListeners(driver, new DriverTCPConnectionService(driver.name));
     check utils:initializeHubClient(payments_hub.base_url);
+    check utils:registerDriverAtHub(driverMetadata);
     //todo initialize outbound client
 }
 
