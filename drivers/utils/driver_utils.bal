@@ -56,12 +56,12 @@ public function initializeHubClient(string hubUrl) returns error? {
 
 # Register driver at payments hub.
 #
-# + driverMetadata - populated driver metadata record
+# + driverRegisterMetadata - populated driver metadata record
 # + return - error
 public function registerDriverAtHub(models:DriverRegisterModel driverRegisterMetadata) returns error? {
 
-    log:printInfo(string `[Driver Utils] Registering driver " + driverRegisterMetadata.driverName + " at payments hub.`, 
-        DriverInfo = driverRegisterMetadata.toJson());
+    log:printInfo(string `[Driver Utils] Registering driver ${driverRegisterMetadata.driverName} at payments hub.`,
+            DriverInfo = driverRegisterMetadata.toJson());
     models:DriverMetadata registerResponse = check hubClient->/payments\-hub/register.post(driverRegisterMetadata);
 
     // ToDo: Add error handling and retry logic
@@ -131,8 +131,8 @@ public function sendToPaymentNetwork(json payload) returns json|error? {
 # + countryCode - country code of the driver  
 # + paymentsEndpoint - payments endpoint which can be called by source drivers
 # + return - populated driver metadata record
-public function createDriverRegisterModel(string driverName, string countryCode, 
-    models:AccountsLookUp[]? accountsLookUp, string driverGatewayUrl) returns models:DriverRegisterModel {
+public function createDriverRegisterModel(string driverName, string countryCode,
+        models:AccountsLookUp[]? accountsLookUp, string driverGatewayUrl) returns models:DriverRegisterModel {
 
     models:DriverRegisterModel driverMetadata = {
 
