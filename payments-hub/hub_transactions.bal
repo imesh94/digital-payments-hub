@@ -22,26 +22,28 @@ import ballerina/log;
 # Send payment message to target driver and get the response.
 #
 # + countryCode - country code of the target driver  
+# + correlationId - x-correlation-id to track the request 
 # + payload - request payload  
 # + return - response from the destination driver | error response
-function sendPaymentRequestToTargetDriver(string countryCode, models:TransactionsRequest payload)
+function sendPaymentRequestToTargetDriver(string countryCode, string correlationId, models:TransactionsRequest payload)
     returns json {
 
-    http:Request request = new;
-    request.setHeader("Content-Type", "application/json");
-    request.setPayload(payload.data);
+    map<string> headersMap = {
+        X\-Correlation\-ID: correlationId
+    };
 
-    string paymentsEndpoint = getPaymentsEndpointForCountry(countryCode);
+    string gatewayUrl = getGatewayEndpointForCountry(countryCode);
+    string paymentsEndpoint = string `${gatewayUrl}/driver-api/payments`;
     // ToDo: Cache http clients
     http:Client|error targetHttpClient = new (paymentsEndpoint);
     if (targetHttpClient is http:Client) {
-        http:Response|http:ClientError response = targetHttpClient->/.post(request);
+        http:Response|http:ClientError response = targetHttpClient->/.post(payload, headersMap);
 
         if (response is http:Response) {
             int responseStatusCode = response.statusCode;
             json|http:ClientError responsePayload = response.getJsonPayload();
 
-            if (responseStatusCode == 200 && responsePayload is json) {
+            if ((responseStatusCode == 200 || responseStatusCode == 201) && responsePayload is json) {
                 return responsePayload;
             } else if (responsePayload is json) {
                 log:printError("Error returned from the target driver");
@@ -56,7 +58,7 @@ function sendPaymentRequestToTargetDriver(string countryCode, models:Transaction
                 return errorResponse;
             }
         } else {
-            log:printError("Client error occurred while sending request");
+            log:printError(string `Client error occurred while sending request. ${response.message()}`);
             json clientErrorResponse = {
                 "error": "Failed to get a valid response from the target",
                 "details": response.message()
@@ -75,26 +77,28 @@ function sendPaymentRequestToTargetDriver(string countryCode, models:Transaction
 # Send lookup message to target driver and get the response.
 #
 # + countryCode - country code of the target driver  
+# + correlationId - x-correlation-id to track the request 
 # + payload - request payload  
 # + return - response from the destination driver | error response
-function sendLookupRequestToTargetDriver(string countryCode, models:AccountLookupRequest payload)
+function sendLookupRequestToTargetDriver(string countryCode, string correlationId, models:AccountLookupRequest payload)
     returns json {
 
-    http:Request request = new;
-    request.setHeader("Content-Type", "application/json");
-    request.setPayload(payload.toJson());
+    map<string> headersMap = {
+        X\-Correlation\-ID: correlationId
+    };
 
-    string paymentsEndpoint = getPaymentsEndpointForCountry(countryCode);
+    string gatewayUrl = getGatewayEndpointForCountry(countryCode);
+    string lookupEndpoint = string `${gatewayUrl}/driver-api/accounts/look-up`;
     // ToDo: Cache http clients
-    http:Client|error targetHttpClient = new (paymentsEndpoint);
+    http:Client|error targetHttpClient = new (lookupEndpoint);
     if (targetHttpClient is http:Client) {
-        http:Response|http:ClientError response = targetHttpClient->/.post(request);
+        http:Response|http:ClientError response = targetHttpClient->/.post(payload, headersMap);
 
         if (response is http:Response) {
             int responseStatusCode = response.statusCode;
             json|http:ClientError responsePayload = response.getJsonPayload();
 
-            if (responseStatusCode == 200 && responsePayload is json) {
+            if ((responseStatusCode == 200 || responseStatusCode == 201) && responsePayload is json) {
                 return responsePayload;
             } else if (responsePayload is json) {
                 log:printError("Error returned from the target driver");
@@ -124,7 +128,3 @@ function sendLookupRequestToTargetDriver(string countryCode, models:AccountLooku
         return clientInitError;
     }
 }
-
-//function getAccountLookupResponseFromJson(json lookupResponse) returns AccountLookupResponse {
-// ToDo
-//}
