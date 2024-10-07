@@ -19,17 +19,17 @@ import ballerina/log;
 
 import digitalpaymentshub/payments_hub.models;
 
-service /driver\-api on new http:Listener(9093) {
+service /driver\-api on new http:Listener(driver.driver_api.port) {
     resource function post payments(@http:Header string x\-correlation\-id, models:TransactionsRequest payload)
         returns http:Ok {
 
-        log:printDebug("Sample driver received payment request");
+        log:printDebug("[Sample driver] Received payment request");
         string correlationId = x\-correlation\-id;
 
         // Send request to payment network
-        log:printDebug("Sending request to the payment network");
+        log:printDebug("[Sample driver] Sending request to the payment network");
 
-        log:printDebug("Received response from the payment network");
+        log:printDebug("[Sample driver] Received response from the payment network");
         json paymentNetworkResponse = {
             "status": "success",
             "message": "Payment processed successfully"
@@ -39,22 +39,22 @@ service /driver\-api on new http:Listener(9093) {
             headers: {"correlationId": correlationId}
         };
         // Return response
-        log:printDebug("Responding to the source driver");
+        log:printDebug("[Sample driver] Responding to the source driver");
         return response;
     };
 
     resource function post accounts/look\-up(@http:Header string x\-correlation\-id,
             models:AccountLookupRequest accountLookupRequest) returns models:AccountLookupResponse {
 
-        log:printDebug("Sample driver received payment request");
+        log:printDebug("[Sample driver] received lookup request");
         string correlationId = x\-correlation\-id;
 
         string proxyType = accountLookupRequest.proxyType;
         string proxyValue = accountLookupRequest.proxyValue;
         // Send request to payment network
-        log:printDebug("Sending request to the payment network");
+        log:printDebug("[Sample driver] Sending request to the payment network");
 
-        log:printDebug("Received response from the payment network");
+        log:printDebug("[Sample driver] Received response from the payment network");
         models:AccountLookupResponse accountLookupResponse = {
             headers: {"correlationId": correlationId},
             body: {

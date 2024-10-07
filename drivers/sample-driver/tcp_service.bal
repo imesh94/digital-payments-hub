@@ -19,26 +19,6 @@ import ballerina/tcp;
 import ballerina/uuid;
 
 import digitalpaymentshub/drivers.utils;
-import digitalpaymentshub/payments_hub.models;
-
-configurable models:DriverConfig driver = ?;
-configurable models:PaymentsHubConfig payments_hub = ?;
-
-public function main() returns error? {
-
-    string driverGatewayUrl = driver.driver_api.gateway_url;
-
-    models:AccountsLookUp[] accountsLookUp = [
-        {'type: "MBNO", description: "Mobile Number"},
-        {'type: "NIC", description: "National Identity Card Number"}
-    ];
-    models:DriverRegisterModel driverMetadata = utils:createDriverRegisterModel(driver.name, driver.code,
-            accountsLookUp, driverGatewayUrl);
-    check utils:initializeDriverListeners(driver, new DriverTCPConnectionService(driver.name));
-    check utils:initializeHubClient(payments_hub.base_url);
-    check utils:registerDriverAtHub(driverMetadata);
-    //todo initialize outbound client
-}
 
 public service class DriverTCPConnectionService {
 
@@ -47,44 +27,42 @@ public service class DriverTCPConnectionService {
 
     function init(string driverName) {
 
-        log:printInfo("Initialized new TCP listener for " + driverName);
+        log:printInfo("[Sample driver] Initialized new TCP listener for " + driverName);
         self.driverName = driverName;
     }
 
     function onBytes(tcp:Caller caller, readonly & byte[] data) returns byte[] {
 
-        log:printDebug("Received inbound request");
+        log:printDebug("[Sample driver] Received inbound request");
         string correlationId = uuid:createType4AsString();
 
         // Convert data to iso20022
         json sampleJson = {"data": "sample data"};
 
         // Send to destination driver
-        log:printDebug("Forwarding request to destination driver");
-        json|error? destinationResponse = utils:sendToHub(
-                "MY", sampleJson, "correlation-id");
-        if (destinationResponse is json) {
-            log:printDebug(
-                    "Response received from destination driver: " + destinationResponse.toString() +
-                    " CorrelationId: " + correlationId);
+        log:printDebug("[Sample driver] Forwarding request to payments hub");
+        json|error? hubResponse = utils:sendPaymentRequestToHub("MY", sampleJson, "correlation-id");
+        if (hubResponse is json) {
+            log:printDebug("[Sample driver] Response received from payments hub: " +
+                    hubResponse.toString() + " CorrelationId: " + correlationId);
         } else {
-            log:printError("Error occurred while getting response from the destination driver", destinationResponse);
+            log:printError("[Sample driver] Error occurred while getting response from the payments hub", hubResponse);
             return self.sendError("errorCode");
         }
 
         // Convert response to iso8583
 
         // Respond
-        log:printDebug("Responding to source");
+        log:printDebug("[Sample driver] Responding to source");
         return data;
     }
 
     function onError(tcp:Error err) {
-        log:printError("An error occurred", 'error = err);
+        log:printError("[Sample driver] An error occurred", 'error = err);
     }
 
     function onClose() {
-        log:printInfo("Client left");
+        log:printInfo("[Sample driver] Client left");
     }
 
     function sendError(string errorCode) returns byte[] {
