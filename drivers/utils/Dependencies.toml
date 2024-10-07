@@ -259,9 +259,6 @@ dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "time"}
 ]
-modules = [
-	{org = "ballerina", packageName = "task", moduleName = "task"}
-]
 
 [[package]]
 org = "ballerina"
@@ -325,12 +322,11 @@ dependencies = [
 [[package]]
 org = "digitalpaymentshub"
 name = "drivers.utils"
-version = "0.0.25"
+version = "0.0.27"
 dependencies = [
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "lang.runtime"},
 	{org = "ballerina", name = "log"},
-	{org = "ballerina", name = "task"},
 	{org = "ballerina", name = "tcp"},
 	{org = "digitalpaymentshub", name = "payments_hub"}
 ]
