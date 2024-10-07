@@ -38,9 +38,10 @@ public service class DriverTCPConnectionService {
         string correlationId = uuid:createType4AsString();
 
         // Convert data to iso20022
-        models:TransactionsRequest sampleJson = {
+        models:TransactionsRequest sampleJson =
+            {
             "data":
-                                {
+                    {
                 "id": 1,
                 "amount": "1000 USD"
             }

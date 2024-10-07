@@ -1,4 +1,2 @@
 port = 9100
 
-[ballerina.log]
-level = "DEBUG"
