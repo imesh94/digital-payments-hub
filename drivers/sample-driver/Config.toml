@@ -12,7 +12,7 @@ port = 8084
 [driver.outbound]
 transport = "tcp"
 host = "localhost"
-port = 8300
+port = 8201
 
 # hub facing api of the driver
 [driver.driver_api]
