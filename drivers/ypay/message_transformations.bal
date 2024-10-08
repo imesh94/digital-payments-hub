@@ -14,67 +14,84 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import drivers.paynet.models;
+import drivers.ypay.models;
 
 import ballerinax/financial.iso20022;
 
-function transformPrxy004toPacs002(models:PrxyLookUpRspnCBFT prxyLookUpRspnCbft)
-    returns iso20022:FIToFIPmtStsRpt => {
-    GrpHdr: {
-        MsgId: prxyLookUpRspnCbft.GrpHdr.MsgId,
-        CreDtTm: prxyLookUpRspnCbft.GrpHdr.CreDtTm,
-        NbOfTxs: 1,
-        OrgnlBizQry: {
-            MsgId: "",
-            MsgNmId: prxyLookUpRspnCbft.OrgnlGrpInf.OrgnlMsgNmId,
-            CreDtTm: prxyLookUpRspnCbft.OrgnlGrpInf.OrgnlCreDtTm ?: ""
-        }
-    },
-    TxInfAndSts: {
-        InstgAgt: {
-            FinInstnId: {
-                BICFI: prxyLookUpRspnCbft.GrpHdr.MsgSndr.Agt.FinInstnId.Othr.Id
-            }
-        },
-        OrgnlTxRef: {
-            PrvsInstgAgt1Acct: {
-                Prxy: {
-                    Tp: {
-                        Cd: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Prxy?.Tp,
-                        Prtry: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Prxy?.Val
-                    },
-                    Id: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Prxy?.Val ?: ""
-                }
-            },
-            CdtrAgt: {
-                FinInstnId: {
-                    ClrSysMmbId: {MmbId: getAccountIds(prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn)},
-                    BICFI: getAgentIds(prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn),
-                    Nm: getAccountNames(prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn)
-                }
-            },
-            Cdtr: {},
-            ChrgBr: "",
-            Dbtr: {},
-            DbtrAgt: {FinInstnId: {}},
-            IntrBkSttlmAmt: {\#content: 0, Ccy: ""},
-            PmtId: {EndToEndId: ""}
+import digitalpaymentshub/payments_hub.models as hub_models;
 
-        }
-    },
-    OrgnlGrpInfAndSts: {
-        OrgnlMsgId: prxyLookUpRspnCbft.OrgnlGrpInf.OrgnlMsgId,
-        OrgnlMsgNmId: prxyLookUpRspnCbft.OrgnlGrpInf.OrgnlMsgNmId,
-        OrgnlCreDtTm: prxyLookUpRspnCbft.OrgnlGrpInf.OrgnlCreDtTm,
-        OrgnlNbOfTxs: "1",
-        StsRsnInf: {
-            Rsn: {
-                Cd: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.StsRsnInf?.Cd,
-                Prtry: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.StsRsnInf?.Prtry
-            }
+function transformPrxy004toAccountLookupResponse(models:PrxyLookUpRspnCBFT prxyLookUpRspnCbft)
+    returns hub_models:AccountLookupResponse => {
+    body: {
+        account: {
+            accountId: getAccountIds(prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn),
+            agentId: getAgentIds(prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn),
+            name: getAccountNames(prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn)
+        },
+        proxy: {
+            'type: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Prxy?.Tp ?: "", 
+            value: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Prxy?.Val ?: ""
         }
     }
 };
+
+// function transformPrxy004toPacs002(models:PrxyLookUpRspnCBFT prxyLookUpRspnCbft)
+//     returns iso20022:FIToFIPmtStsRpt => {
+//     GrpHdr: {
+//         MsgId: prxyLookUpRspnCbft.GrpHdr.MsgId,
+//         CreDtTm: prxyLookUpRspnCbft.GrpHdr.CreDtTm,
+//         NbOfTxs: 1,
+//         OrgnlBizQry: {
+//             MsgId: "",
+//             MsgNmId: prxyLookUpRspnCbft.OrgnlGrpInf.OrgnlMsgNmId,
+//             CreDtTm: prxyLookUpRspnCbft.OrgnlGrpInf.OrgnlCreDtTm ?: ""
+//         }
+//     },
+//     TxInfAndSts: {
+//         InstgAgt: {
+//             FinInstnId: {
+//                 BICFI: prxyLookUpRspnCbft.GrpHdr.MsgSndr.Agt.FinInstnId.Othr.Id
+//             }
+//         },
+//         OrgnlTxRef: {
+//             PrvsInstgAgt1Acct: {
+//                 Prxy: {
+//                     Tp: {
+//                         Cd: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Prxy?.Tp,
+//                         Prtry: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Prxy?.Val
+//                     },
+//                     Id: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Prxy?.Val ?: ""
+//                 }
+//             },
+//             CdtrAgt: {
+//                 FinInstnId: {
+//                     ClrSysMmbId: {MmbId: getAccountIds(prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn)},
+//                     BICFI: getAgentIds(prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn),
+//                     Nm: getAccountNames(prxyLookUpRspnCbft.LkUpRspn.RegnRspn.Regn)
+//                 }
+//             },
+//             Cdtr: {},
+//             ChrgBr: "",
+//             Dbtr: {},
+//             DbtrAgt: {FinInstnId: {}},
+//             IntrBkSttlmAmt: {\#content: 0, Ccy: ""},
+//             PmtId: {EndToEndId: ""}
+
+//         }
+//     },
+//     OrgnlGrpInfAndSts: {
+//         OrgnlMsgId: prxyLookUpRspnCbft.OrgnlGrpInf.OrgnlMsgId,
+//         OrgnlMsgNmId: prxyLookUpRspnCbft.OrgnlGrpInf.OrgnlMsgNmId,
+//         OrgnlCreDtTm: prxyLookUpRspnCbft.OrgnlGrpInf.OrgnlCreDtTm,
+//         OrgnlNbOfTxs: "1",
+//         StsRsnInf: {
+//             Rsn: {
+//                 Cd: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.StsRsnInf?.Cd,
+//                 Prtry: prxyLookUpRspnCbft.LkUpRspn.RegnRspn.StsRsnInf?.Prtry
+//             }
+//         }
+//     }
+// };
 
 function getAccountIds(models:Regn[]? registers) returns string {
     if (registers is models:Regn[]) {
@@ -83,7 +100,7 @@ function getAccountIds(models:Regn[]? registers) returns string {
         foreach models:Regn value in registers {
             result += value.Acct.Id.Othr.Id + "|";
         }
-        return result.substring(0, result.length() - 1);
+        return result.length() > 0 ? result.substring(0, result.length() - 1) : result;
     }
     return "";
 
@@ -96,7 +113,7 @@ function getAccountNames(models:Regn[]? registers) returns string {
         foreach models:Regn value in registers {
             result += (value.Acct.Nm ?: "") + "|";
         }
-        return result.substring(0, result.length() - 1);
+        return result.length() > 0 ? result.substring(0, result.length() - 1) : result;
     }
     return "";
 
@@ -109,32 +126,33 @@ function getAgentIds(models:Regn[]? registers) returns string {
         foreach models:Regn value in registers {
             result += value.Agt.FinInstnId.Othr.Id + "|";
         }
-        return result.substring(0, result.length() - 1);
+        return result.length() > 0 ? result.substring(0, result.length() - 1) : result;
     }
     return "";
 
 }
 
-isolated function transformPacs008toFundTransfer(iso20022:FIToFICstmrCdtTrf fiToFiCstmrCdtTrf) returns models:fundTransfer|error => {
-    data: {
-        businessMessageId: check generateXBusinessMsgId(fiToFiCstmrCdtTrf.CdtTrfTxInf[0].DbtrAcct?.Id?.Othr?.Id ?: ""),
-        createdDateTime: check getCurrentDateTime(),
-        proxy: {
-            tp: resolveProxyType(fiToFiCstmrCdtTrf.SplmtryData),
-            value: resolveProxy(fiToFiCstmrCdtTrf.SplmtryData)
-        },
-        account: {
-            id: fiToFiCstmrCdtTrf.CdtTrfTxInf[0].DbtrAcct?.Id?.Othr?.Id ?: "",
-            name: fiToFiCstmrCdtTrf.CdtTrfTxInf[0].DbtrAcct?.Nm ?: "",
-            tp: "CACC",
-            accountHolderType: "S"
-        },
-        secondaryId: {
-            tp: "NRIC",
-            value: "94771234567"
-        }
-    }
-};
+// isolated function transformPacs008toFundTransfer(iso20022:FIToFICstmrCdtTrf fiToFiCstmrCdtTrf) 
+//     returns models:fundTransfer|error => {
+//     data: {
+//         businessMessageId: check generateXBusinessMsgId(fiToFiCstmrCdtTrf.CdtTrfTxInf[0].DbtrAcct?.Id?.Othr?.Id ?: ""),
+//         createdDateTime: check getCurrentDateTime(),
+//         proxy: {
+//             tp: resolveProxyType(fiToFiCstmrCdtTrf.SplmtryData),
+//             value: resolveProxy(fiToFiCstmrCdtTrf.SplmtryData)
+//         },
+//         account: {
+//             id: fiToFiCstmrCdtTrf.CdtTrfTxInf[0].DbtrAcct?.Id?.Othr?.Id ?: "",
+//             name: fiToFiCstmrCdtTrf.CdtTrfTxInf[0].DbtrAcct?.Nm ?: "",
+//             tp: "CACC",
+//             accountHolderType: "S"
+//         },
+//         secondaryId: {
+//             tp: "NRIC",
+//             value: "94771234567"
+//         }
+//     }
+// };
 
 isolated function transformFundTransferResponsetoPacs002(models:fundTransferResponse fundTransferResponse,
         iso20022:FIToFICstmrCdtTrf isoPacs008Msg) returns iso20022:FIToFIPmtStsRpt => {

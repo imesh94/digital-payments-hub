@@ -21,6 +21,8 @@ import ballerina/time;
 import ballerinax/financial.iso20022;
 import ballerinax/financial.iso8583;
 
+import digitalpaymentshub/payments_hub.models;
+
 final string:RegExp seperator = re `.`;
 
 function transformMTI200ToISO20022(iso8583:MTI_0200 mti0200) returns iso20022:FIToFICstmrCdtTrf|error => {
@@ -93,7 +95,7 @@ function transformPacs002toMTI0210(iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt, iso
     AcquiringInstitutionIdentificationCode: originalMsg.AcquiringInstitutionIdentificationCode,
     RetrievalReferenceNumber: originalMsg.RetrievalReferenceNumber,
     AuthorizationNumber: "123456",
-    ResponseCode: "00",
+    ResponseCode: fiToFiPmtStsRpt.OrgnlGrpInfAndSts?.StsRsnInf?.Rsn?.Cd == "U000" ? "00" : "14",
     CardAcceptorTerminalID: originalMsg.CardAcceptorTerminalID ?: (),
     CardAcceptorIDCode: originalMsg.CardAcceptorIDCode ?: (),
     CardAcceptorNameLocation: originalMsg.CardAcceptorNameLocation ?: (),
@@ -105,7 +107,25 @@ function transformPacs002toMTI0210(iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt, iso
     MessageAuthenticationCode: originalMsg.MessageAuthenticationCode ?: "11111111"
 };
 
+function transformToAccountLookupRequest(iso8583:MTI_0200 isomsg) returns models:AccountLookupRequest {
+    map<string> field120DataElements = parseField120(isomsg.EftTlvData);
+    string proxyType = getDataFromField120(field120DataElements, "011");
+    string proxyValue = getDataFromField120(field120DataElements, "012");
+    string bicCode = getDataFromField120(field120DataElements, "002");
+    models:AccountLookupRequest accountLookupRequest = {
+        proxyType: proxyType,
+        proxyValue: proxyValue,
+        metadata: {
+            "bicCode": bicCode
+        }
+    };
+    return accountLookupRequest;
+}
+
 function buildDE120(string? originalField, iso20022:FIToFIPmtStsRpt fiToFiPmtStsRpt) returns string {
+    if (fiToFiPmtStsRpt.OrgnlGrpInfAndSts?.StsRsnInf?.Rsn?.Cd == "U000") {
+        return originalField ?: "";
+    }
     string accountIds = fiToFiPmtStsRpt.TxInfAndSts?.OrgnlTxRef?.CdtrAgt?.FinInstnId?.ClrSysMmbId?.MmbId ?: "";
     string accountIdsLength = accountIds.length().toString().padZero(3);
     string field017 = "017" + accountIdsLength + accountIds;
@@ -129,6 +149,35 @@ function transformMTI0800toMTI0810(iso8583:MTI_0800 mti0800) returns iso8583:MTI
     NetworkManagementInformationCode: mti0800.NetworkManagementInformationCode,
     NetworkManagementInformationChannelType: mti0800.NetworkManagementInformationChannelType,
     ResponseCode: "00"
+};
+
+function buildMTI0210error(iso8583:MTI_0200 mti0200, string responseCode) returns iso8583:MTI_0210 => {
+    PrimaryAccountNumber: mti0200.PrimaryAccountNumber,
+    ProcessingCode: mti0200.ProcessingCode,
+    AmountTransaction: mti0200.AmountTransaction,
+    TransmissionDateTime: mti0200.TransmissionDateTime,
+    SystemTraceAuditNumber: mti0200.SystemTraceAuditNumber,
+    LocalTransactionTime: mti0200.LocalTransactionTime,
+    LocalTransactionDate: mti0200.LocalTransactionDate,
+    MerchantType: mti0200.MerchantType,
+    PointOfServiceEntryMode: mti0200.PointOfServiceEntryMode,
+    PointOfServiceConditionCode: mti0200.PointOfServiceConditionCode,
+    AmountTransactionFee: mti0200.AmountTransactionFee,
+    AcquiringInstitutionIdentificationCode: mti0200.AcquiringInstitutionIdentificationCode,
+    RetrievalReferenceNumber: mti0200.RetrievalReferenceNumber,
+    CardAcceptorTerminalID: mti0200.CardAcceptorTerminalID,
+    CardAcceptorIDCode: mti0200.CardAcceptorIDCode,
+    CardAcceptorNameLocation: mti0200.CardAcceptorNameLocation,
+    CurrencyCodeTransaction: mti0200.CurrencyCodeTransaction,
+    IntegratedCircuitCardSystemRelatedData: mti0200.IntegratedCircuitCardSystemRelatedData,
+    AccountIdentification1: mti0200.AccountIdentification1,
+    AccountIdentification2: mti0200.AccountIdentification2,
+    EftTlvData: mti0200.EftTlvData ?: "",
+    MessageAuthenticationCode: mti0200.MessageAuthenticationCode,
+    SettlementDate: mti0200.SettlementDate ?: "",
+    DateCapture: mti0200.DateCapture ?: "",
+    ReceivingInstitutionIdentificationCode: "",
+    ResponseCode: responseCode
 };
 
 # Map the fields that cannot be directly mapped to ISO 20022 field to the supplementary data element.
@@ -156,10 +205,6 @@ function mapSupplementaryData(iso8583:MTI_0200 mti0200) returns iso20022:Splmtry
     map<string> field120DataElements = parseField120(mti0200.EftTlvData);
     foreach string tag in field120DataElements.keys() {
         supplementaryData[tag] = field120DataElements.get(tag);
-    }
-    // check for proxy request
-    if (mti0200.ProcessingCode.startsWith(PROXY_REQUEST_PROCESSING_CODE_PREFIX)) {
-        supplementaryData["ProxyRequest"] = "true";
     }
     // build supplementary data array
     foreach string dataElement in supplementaryData.keys() {

@@ -22,11 +22,13 @@ import ballerina/log;
 import ballerina/time;
 import ballerinax/financial.iso20022;
 
-json receivedData = {"accountName": "",
-                     "originatingBank": "",
-                    "destinationBank": "",
-                    "amount": "",
-                    "isomsg":""};
+json receivedData = {
+    "accountName": "",
+    "originatingBank": "",
+    "destinationBank": "",
+    "amount": "",
+    "isomsg": ""
+};
 
 # A service representing a network-accessible API
 # bound to port `9090`.
@@ -37,7 +39,7 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
     # + caller - http caller
     # + req - http request
     # + return - return value description
-    isolated resource function get resolution/[string proxyType]/[string proxy](http:Caller caller, http:Request req)
+    resource function get resolution/[string proxyType]/[string proxy](http:Caller caller, http:Request req)
         returns error? {
 
         string xBusinessMsgId = check req.getHeader("X-Business-Message-Id");
@@ -67,57 +69,16 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
                     Tp: proxyType
                 },
                 RegnRspn: {
-                    PrxRspnSts: "ACTC",
+                    PrxRspnSts: isValidProxy(proxy) ? "ACTC" : "RJCT",
                     StsRsnInf: {
-                        Cd: "U000",
+                        Cd: isValidProxy(proxy) ? "U000" : "U129",
                         Prtry: ""
                     },
                     Prxy: {
                         Tp: proxyType,
                         Val: proxy
                     },
-                    Regn: [
-                        {
-                            RegnId: "0075800025",
-                            DsplNm: "Bank Account",
-                            Agt: {
-                                FinInstnId: {
-                                    Othr: {
-                                        Id: "AIBMMYKLXXX"
-                                    }
-                                }
-                            },
-                            Acct: {
-                                Id: {
-                                    Othr: {
-                                        Id: "111222333444"
-                                    }
-                                },
-                                Nm: "ACCOUNT1"
-                            },
-                            PreAuthrsd: ""
-                        },
-                        {
-                            RegnId: "0075800025",
-                            DsplNm: "Bank Account",
-                            Agt: {
-                                FinInstnId: {
-                                    Othr: {
-                                        Id: "AIBMMYKLXXX"
-                                    }
-                                }
-                            },
-                            Acct: {
-                                Id: {
-                                    Othr: {
-                                        Id: "555666777888"
-                                    }
-                                },
-                                Nm: "ACCOUNT2"
-                            },
-                            PreAuthrsd: ""
-                        }
-                    ]
+                    Regn: getAccounts(proxy)
                 }
             },
             OrgnlGrpInf: {
@@ -137,28 +98,22 @@ service /v1/picasso\-guard/banks/nad/v2 on new http:Listener(9301) {
         // models:FundTransfer fundTransferPayload = check jsondata:parseAsType(payload);
         iso20022:FIToFICstmrCdtTrf isoPacs008 = check jsondata:parseAsType(payload);
 
-        if (isoPacs008 is iso20022:FIToFICstmrCdtTrf) {
-            receivedData = {
-                "accountName": (isoPacs008.CdtTrfTxInf[0].Dbtr.Nm ?: ""),
-                "originatingBank": (isoPacs008.CdtTrfTxInf[0].DbtrAcct?.Id?.Othr?.Id ?: ""),
-                "destinationBank": (isoPacs008.CdtTrfTxInf[0].CdtrAgt.FinInstnId.Othr?.Id ?: ""),
-                "amount": (isoPacs008.CdtTrfTxInf[0].IntrBkSttlmAmt.\#content).toString(),
-                "isomsg": isoPacs008.toJson()
-            };
+        receivedData = {
+            "accountName": (isoPacs008.CdtTrfTxInf[0].Dbtr.Nm ?: ""),
+            "originatingBank": (isoPacs008.CdtTrfTxInf[0].DbtrAcct?.Id?.Othr?.Id ?: ""),
+            "destinationBank": (isoPacs008.CdtTrfTxInf[0].CdtrAgt.FinInstnId.Othr?.Id ?: ""),
+            "amount": (isoPacs008.CdtTrfTxInf[0].IntrBkSttlmAmt.\#content).toString(),
+            "isomsg": isoPacs008.toJson()
+        };
 
-            log:printDebug(string `[YPay Payment Switch] Fund transfer detials received [id: ${xBusinessMsgId}].`, Message = receivedData.toJson());
-            // log:printDebug("account id: " + (isoPacs008.CdtTrfTxInf[0].Dbtr.Nm ?: ""));
-            // log:printDebug("agent id: " + (isoPacs008.CdtTrfTxInf[0].CdtrAgt.FinInstnId.Othr?.Id ?: ""));
-            // log:printDebug("amount: " + (isoPacs008.CdtTrfTxInf[0].IntrBkSttlmAmt.\#content).toString());
-
-
-        }
+        log:printDebug(string `[YPay Payment Switch] Fund transfer detials received [id: ${xBusinessMsgId}].`, Message = receivedData.toJson());
+    
         models:FundTransferResponse response = {
             data: {
                 businessMessageId: xBusinessMsgId,
                 createdDateTime: isoPacs008.GrpHdr.CreDtTm,
-                code: "ACTC",
-                reason: "U000",
+                code: "U000",
+                reason: "ACTC",
                 registrationId: "0075800039"
             }
         };
@@ -176,3 +131,86 @@ service / on new http:Listener(5601) {
         check caller->respond(httpResponse);
     }
 }
+
+function getAccounts(string mobileNumber) returns models:Regn[] {
+
+    match mobileNumber {
+        "0060412341234" =>
+            {
+            return [
+                {
+                    RegnId: "0075800025",
+                    DsplNm: "Bank Account",
+                    Agt: {
+                        FinInstnId: {
+                            Othr: {
+                                Id: "AIBMMYKLXXX"
+                            }
+                        }
+                    },
+                    Acct: {
+                        Id: {
+                            Othr: {
+                                Id: "111222333444"
+                            }
+                        },
+                        Nm: "Isabella Rivera"
+                    },
+                    PreAuthrsd: ""
+                },
+                {
+                    RegnId: "0075800025",
+                    DsplNm: "Bank Account",
+                    Agt: {
+                        FinInstnId: {
+                            Othr: {
+                                Id: "AIBMMYKLXXX"
+                            }
+                        }
+                    },
+                    Acct: {
+                        Id: {
+                            Othr: {
+                                Id: "555666777888"
+                            }
+                        },
+                        Nm: "Jordan Ramirez"
+                    },
+                    PreAuthrsd: ""
+                }
+            ];
+        }
+        "0060123456789" => {
+            return [
+                {
+                    RegnId: "0092800067",
+                    DsplNm: "Bank Account",
+                    Agt: {
+                        FinInstnId: {
+                            Othr: {
+                                Id: "AIBMMYKLXXX"
+                            }
+                        }
+                    },
+                    Acct: {
+                        Id: {
+                            Othr: {
+                                Id: "331222000565"
+                            }
+                        },
+                        Nm: "Alex Thornton"
+                    },
+                    PreAuthrsd: ""
+                }
+            ];
+        }
+        _ => {
+            return [];
+        }
+    }
+}
+
+function isValidProxy(string mobileNumber) returns boolean {
+    string[] vlaidNumbers = ["0060412341234", "0060123456789"];
+    return vlaidNumbers.some(n => n == mobileNumber);
+};

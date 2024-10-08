@@ -1,17 +1,24 @@
 [package]
 org = "digitalpaymentshub"
-name = "drivers.paynet"
-version = "0.1.0"
+name = "drivers.ypay"
+version = "0.0.1"
 distribution = "2201.10.0"
+
 
 [build-options]
 observabilityIncluded = true
 
 [[dependency]]
 org = "digitalpaymentshub"
-name = "drivers.util"
-version = "0.0.14"
+name = "drivers.utils"
+version = "0.0.30"
 repository = "local"
+
+[[dependency]]
+org = "digitalpaymentshub"
+name = "payments_hub"
+repository = "local"
+version = "0.0.15"
 
 [[dependency]]
 org = "ballerinax"

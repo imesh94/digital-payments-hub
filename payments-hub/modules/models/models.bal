@@ -36,6 +36,13 @@ public type TransactionsRequest record {
     json data;
 };
 
+public type TransactionResponse record {|
+    *http:Ok;
+    record {|
+        json data;
+    |} body;
+|};
+
 public type ErrorResponse record {
     int statusCode;
     string errorCode;

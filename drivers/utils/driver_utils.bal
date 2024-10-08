@@ -21,8 +21,7 @@ import ballerina/tcp;
 
 import digitalpaymentshub/payments_hub.models;
 
-http:Client hubClient = check new ("localhost:9090"); //ToDo: Remove
-public http:Client paymentNetworkClient = check new ("localhost:9092"); //ToDo: Remove
+http:Client hubClient = check new ("localhost:7777"); //ToDo: Remove
 
 # Initialize http/tcp listeners for the driver based on configurations.
 #
@@ -59,8 +58,7 @@ public function registerDriverAtHub(models:DriverRegisterModel driverRegisterMet
 
     log:printInfo(string `[Driver Utils] Registering driver ${driverRegisterMetadata.driverName} at payments hub.`,
             DriverInfo = driverRegisterMetadata.toJson());
-    models:DriverMetadata registerResponse = check hubClient->/payments\-hub/register.post(driverRegisterMetadata);
-
+    models:DriverRegisterModel registerResponse = check hubClient->/payments\-hub/register.post(driverRegisterMetadata);
     // ToDo: Add error handling and retry logic
     log:printInfo(string `[Driver Utils] Registration response received.` , Response = registerResponse.toJson());
 
@@ -80,7 +78,7 @@ public function sendPaymentRequestToHub(string countryCode, json payload, string
     request.setHeader("X-Correlation-ID", correlationId);
     request.setHeader("Country-Code", countryCode);
     request.setPayload(payload);
-    http:Response response = check hubClient->/cross\-border/payments.post(request);
+    http:Response response = check hubClient->/payments\-hub/cross\-border/payments.post(request);
     int responseStatusCode = response.statusCode;
     json|http:ClientError responsePayload = response.getJsonPayload();
 
@@ -102,7 +100,7 @@ public function sendAccountsLookUpRequestToHub(string countryCode, json payload,
     request.setHeader("X-Correlation-ID", correlationId);
     request.setHeader("Country-Code", countryCode);
     request.setPayload(payload);
-    http:Response response = check hubClient->/cross\-border/accounts/look\-up.post(request);
+    http:Response response = check hubClient->/payments\-hub/cross\-border/accounts/look\-up.post(request);
     int responseStatusCode = response.statusCode;
     json|http:ClientError responsePayload = response.getJsonPayload();
 

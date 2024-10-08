@@ -1,7 +1,7 @@
 [package]
 org = "digitalpaymentshub"
 name = "payments_hub"
-version = "0.0.12"
+version = "0.0.15"
 distribution = "2201.10.0"
 authors = ["Ballerina"]
 visibility="private"

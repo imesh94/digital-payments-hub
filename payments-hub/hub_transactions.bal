@@ -88,7 +88,7 @@ function sendLookupRequestToTargetDriver(string countryCode, models:AccountLooku
     // ToDo: Cache http clients
     http:Client|error targetHttpClient = new (paymentsEndpoint);
     if (targetHttpClient is http:Client) {
-        http:Response|http:ClientError response = targetHttpClient->/.post(request);
+        http:Response|http:ClientError response = targetHttpClient->/driver\-api/accounts/lookup.post(request);
 
         if (response is http:Response) {
             int responseStatusCode = response.statusCode;
