@@ -19,6 +19,7 @@ import ballerina/tcp;
 import ballerina/uuid;
 
 import digitalpaymentshub/drivers.utils;
+import digitalpaymentshub/payments_hub.models;
 
 public service class DriverTCPConnectionService {
 
@@ -37,11 +38,18 @@ public service class DriverTCPConnectionService {
         string correlationId = uuid:createType4AsString();
 
         // Convert data to iso20022
-        json sampleJson = {"data": "sample data"};
+        models:TransactionsRequest sampleJson =
+            {
+            "data":
+                    {
+                "id": 1,
+                "amount": "1000 USD"
+            }
+        };
 
         // Send to destination driver
         log:printDebug("[Sample driver] Forwarding request to payments hub");
-        json|error? hubResponse = utils:sendPaymentRequestToHub("MY", sampleJson, "correlation-id");
+        json|error? hubResponse = utils:sendPaymentRequestToHub("SD2", sampleJson, "correlation-id");
         if (hubResponse is json) {
             log:printDebug("[Sample driver] Response received from payments hub: " +
                     hubResponse.toString() + " CorrelationId: " + correlationId);

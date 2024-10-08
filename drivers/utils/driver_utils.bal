@@ -62,7 +62,7 @@ public function registerDriverAtHub(models:DriverRegisterModel driverRegisterMet
     models:DriverMetadata registerResponse = check hubClient->/payments\-hub/register.post(driverRegisterMetadata);
 
     // ToDo: Add error handling and retry logic
-    log:printInfo(string `[Driver Utils] Registration response received.` , Response = registerResponse.toJson());
+    log:printInfo(string `[Driver Utils] Registration response received.`, Response = registerResponse.toJson());
 
 }
 
@@ -72,50 +72,47 @@ public function registerDriverAtHub(models:DriverRegisterModel driverRegisterMet
 # + payload - request payload  
 # + correlationId - correlation-id to track the transaction
 # + return - response from the destination driver | error
-public function sendPaymentRequestToHub(string countryCode, json payload, string correlationId) returns
-    json|error {
+public function sendPaymentRequestToHub(string countryCode, models:TransactionsRequest payload, string correlationId)
+    returns json|error {
 
-    http:Request request = new;
-    request.setHeader("Content-Type", "application/json");
-    request.setHeader("X-Correlation-ID", correlationId);
-    request.setHeader("Country-Code", countryCode);
-    request.setPayload(payload);
-    http:Response response = check hubClient->/cross\-border/payments.post(request);
+    map<string> headersMap = {
+        X\-Correlation\-ID: correlationId,
+        Country\-Code: countryCode
+    };
+    http:Response response = check hubClient->/payments\-hub/cross\-border/payments.post(payload, headersMap);
     int responseStatusCode = response.statusCode;
     json|http:ClientError responsePayload = response.getJsonPayload();
 
-    if (responseStatusCode == 200 && responsePayload is json) {
+    if ((responseStatusCode == 200 || responseStatusCode == 201) && responsePayload is json) {
         return responsePayload;
     } else if (responsePayload is json) {
         log:printError("[Driver Utils] Error returned from the payments hub");
-        return error(responsePayload.toString() + " CorrelationID: " + correlationId);
+        return error(string `${responsePayload.toString()}. CorrelationID: ${correlationId}`);
     }
     log:printError("[Driver Utils] Error occurred while forwarding request to the payments hub");
     return responsePayload;
 }
 
-public function sendAccountsLookUpRequestToHub(string countryCode, json payload, string correlationId) returns
-    json|error {
+public function sendAccountsLookUpRequestToHub(string countryCode, models:AccountLookupRequest payload,
+        string correlationId) returns json|error {
 
-    http:Request request = new;
-    request.setHeader("Content-Type", "application/json");
-    request.setHeader("X-Correlation-ID", correlationId);
-    request.setHeader("Country-Code", countryCode);
-    request.setPayload(payload);
-    http:Response response = check hubClient->/cross\-border/accounts/look\-up.post(request);
+    map<string> headersMap = {
+        X\-Correlation\-ID: correlationId,
+        Country\-Code: countryCode
+    };
+    http:Response response = check hubClient->/payments\-hub/cross\-border/accounts/look\-up.post(payload, headersMap);
     int responseStatusCode = response.statusCode;
     json|http:ClientError responsePayload = response.getJsonPayload();
 
-    if (responseStatusCode == 200 && responsePayload is json) {
+    if ((responseStatusCode == 200 || responseStatusCode == 201) && responsePayload is json) {
         return responsePayload;
     } else if (responsePayload is json) {
         log:printError("[Driver Utils] Error returned from the payments hub");
-        return error(responsePayload.toString() + " CorrelationID: " + correlationId);
+        return error(string `${responsePayload.toString()}. CorrelationID: ${correlationId}`);
     }
     log:printError("[Driver Utils] Error occurred while forwarding request to the payments hub");
     return responsePayload;
 }
-
 
 // # Send request to the payment network.
 // #
@@ -193,7 +190,7 @@ function initiateNewHTTPListener(models:DriverConfig driver, HTTPConnectionServi
     check httpListener.'start();
     runtime:registerListener(httpListener);
     log:printInfo("[Driver Utils] Started " + driver.name + " HTTP listener on port: " +
-        driver.inbound.port.toString());
+            driver.inbound.port.toString());
 }
 
 # Represent HTTP Listener ConnectionService service type.
