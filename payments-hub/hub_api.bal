@@ -19,24 +19,31 @@ import payments_hub.models;
 import ballerina/http;
 import ballerina/log;
 
-configurable int servicePort = 9100;
+configurable int port = 9100;
 
-service /payments\-hub on new http:Listener(servicePort) {
+public function main() {
+    log:printInfo(string `Starting payments-hub on port: ${port}`);
+}
 
-    resource function post cross\-border/payments(@http:Header string Country\-Code, models:TransactionsRequest payload)
-        returns json {
+service /payments\-hub on new http:Listener(port) {
 
-        log:printDebug("Received payment request payload: " + payload.toJsonString());
-        json responseJson = sendPaymentRequestToTargetDriver(Country\-Code, payload);
+    resource function post cross\-border/payments(@http:Header string Country\-Code, @http:Header string
+            X\-Correlation\-ID, @http:Payload models:TransactionsRequest payload) returns json {
+
+        log:printDebug(string `Received payment request payload: ${payload.toJsonString()}. CorrelationID: 
+            ${X\-Correlation\-ID}`);
+        json responseJson = sendPaymentRequestToTargetDriver(Country\-Code, X\-Correlation\-ID, payload);
         return responseJson;
     }
 
-    resource function post cross\-border/accounts/look\-up(@http:Header string Country\-Code,
-            models:AccountLookupRequest payload) returns json|models:AccountLookupResponse|models:ErrorResponse {
+    resource function post cross\-border/accounts/look\-up(@http:Header string Country\-Code, @http:Header string
+            X\-Correlation\-ID, @http:Payload models:AccountLookupRequest payload)
+            returns json|models:AccountLookupResponse|models:ErrorResponse {
 
         // ToDo : Return lookup response
-        log:printDebug("Received lookup request payload: " + payload.toJsonString());
-        json responseJson = sendLookupRequestToTargetDriver(Country\-Code, payload);
+        log:printDebug(string `Received lookup request payload: ${payload.toJsonString()}. CorrelationID: 
+            ${X\-Correlation\-ID}`);
+        json responseJson = sendLookupRequestToTargetDriver(Country\-Code, X\-Correlation\-ID, payload);
         return responseJson;
     }
 

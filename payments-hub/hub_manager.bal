@@ -38,7 +38,7 @@ function getDriverRegistrationData(string countryCode) returns models:DriverRegi
 #
 # + countryCode - two character country code
 # + return - payments endpoint
-function getPaymentsEndpointForCountry(string countryCode) returns string {
+function getGatewayEndpointForCountry(string countryCode) returns string {
 
     models:DriverRegisterModel? registrationData = driverMap[countryCode];
 
