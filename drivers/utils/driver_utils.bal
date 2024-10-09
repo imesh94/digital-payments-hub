@@ -21,7 +21,7 @@ import ballerina/tcp;
 
 import digitalpaymentshub/payments_hub.models;
 
-http:Client hubClient = check new ("localhost:7777"); //ToDo: Remove
+http:Client hubClient = check new ("localhost:9090"); //ToDo: Remove
 
 # Initialize http/tcp listeners for the driver based on configurations.
 #

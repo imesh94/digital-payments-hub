@@ -94,7 +94,7 @@ public function handleInbound(byte[] & readonly data) returns byte[]|error {
                 log:printDebug("[XPay driver] Sending accounts lookup request to the hub.");
                 models:AccountLookupRequest accountLookupRequest = transformToAccountLookupRequest(validatedMsg);
                 responseJson = utils:sendAccountsLookUpRequestToHub(destinationCountryCode, 
-                    accountLookupRequest.toJson(), correlationId);
+                    accountLookupRequest, correlationId);
             } else {
                 // transform to ISO 20022 message
                 iso20022:FIToFICstmrCdtTrf|error iso20022Msg = transformMTI200ToISO20022(validatedMsg);
@@ -105,7 +105,8 @@ public function handleInbound(byte[] & readonly data) returns byte[]|error {
                     return sendError("06", convertedMti, validatedMsg);
                 }
                 log:printDebug("[XPay driver] Sending payments request to the hub.");
-                responseJson = utils:sendPaymentRequestToHub(destinationCountryCode, iso20022Msg.toJson(), 
+                models:TransactionsRequest transactionRequest = { data: iso20022Msg.toJson() };
+                responseJson = utils:sendPaymentRequestToHub(destinationCountryCode, transactionRequest, 
                     correlationId);
             }
 
@@ -114,7 +115,7 @@ public function handleInbound(byte[] & readonly data) returns byte[]|error {
                 return sendError("92", convertedMti, validatedMsg);
             }
             //transform response
-            iso20022:FIToFIPmtStsRpt|error iso20022Response = constraint:validate(responseJson);
+            iso20022:FIToFIPmtStsRpt|error iso20022Response = constraint:validate(check responseJson.data);
             if (iso20022Response is error) {
                 log:printError("[XPay driver] Error while transforming response to ISO 20022: " 
                     + iso20022Response.message());

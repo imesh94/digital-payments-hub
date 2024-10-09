@@ -21,7 +21,7 @@ import ballerina/http;
 
 configurable models:DriverConfig driver = ?;
 configurable models:PaymentsHubConfig payments_hub = ?;
-public http:Client paymentNetworkClient = check initializeDriverPaymentNetworkClient(driver);
+http:Client paymentNetworkClient = check new ("localhost:8300");
 
 public function main() returns error? {
 
@@ -37,9 +37,10 @@ public function main() returns error? {
     models:DriverRegisterModel driverMetadata = utils:createDriverRegisterModel(driver.name, driver.code, 
         accountsLookUp, driverGatewayUrl);
     check utils:registerDriverAtHub(driverMetadata);
+    check initializeDriverPaymentNetworkClient(driver);
 }
 
-function initializeDriverPaymentNetworkClient(models:DriverConfig driverConfig) returns http:Client|error {
+function initializeDriverPaymentNetworkClient(models:DriverConfig driverConfig) returns error? {
 
-    return check new (driverConfig.outbound.host + ":" + driverConfig.outbound.port.toString());
+    paymentNetworkClient = check new (driverConfig.outbound.host + ":" + driverConfig.outbound.port.toString());
 }

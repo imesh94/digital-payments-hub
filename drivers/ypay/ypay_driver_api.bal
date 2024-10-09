@@ -49,19 +49,24 @@ service http:InterceptableService /driver\-api on new http:Listener(driver.drive
 
     resource function post accounts/look\-up(@http:Header string x\-correlation\-id,
             models:AccountLookupRequest accountLookupRequest) 
-            returns models:AccountLookupResponse|http:NotImplemented|error {
+            returns models:TransactionResponse|http:NotImplemented|error {
 
         // proxy resolution request to Ypay
         log:printDebug(string `[Ypay Driver] Account lookup request received`, 
             ProxyType = accountLookupRequest.proxyType, ProxyValue = accountLookupRequest.proxyValue, 
             CorrelationId = x\-correlation\-id);
-        ypay_models:PrxyLookUpRspnCBFT|error paynetProxyResolution = 
-            getProxyResolution(accountLookupRequest);
-            if (paynetProxyResolution is error) {
-                return error("Error while resolving proxy: " + paynetProxyResolution.message());
-            }
-            // transform to iso 20022 response pacs 002.001.14
-            return transformPrxy004toAccountLookupResponse(paynetProxyResolution);
+        ypay_models:PrxyLookUpRspnCBFT|error paynetProxyResolution = getProxyResolution(accountLookupRequest);
+        if (paynetProxyResolution is error) {
+            return error("Error while resolving proxy: " + paynetProxyResolution.message());
+        }
+        // transform to iso 20022 response pacs 002.001.14
+        iso20022:FIToFIPmtStsRpt isomsg = transformPrxy004toPacs002(paynetProxyResolution);
+        models:TransactionResponse response = {
+            body: {data: isomsg.toJson()}
+        };
+        log:printDebug(string `[Ypay Driver] Responding to Account Lookup request`, CorrelationId = x\-correlation\-id, 
+            Response = response.body);
+        return response;
     };
 
     public function createInterceptors() returns http:Interceptor|http:Interceptor[] {

@@ -16,8 +16,8 @@ port = 8300
 # hub facing api of the driver
 [driver.driver_api]
 host = "localhost"
-port = 9092
-gateway_url = "http://localhost:9092"
+port = 9093
+gateway_url = "http://localhost:9093"
 
 [payments_hub]
 base_url = "http://localhost:9100"

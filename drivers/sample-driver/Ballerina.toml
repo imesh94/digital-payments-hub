@@ -10,11 +10,11 @@ observabilityIncluded = true
 [[dependency]]
 org = "digitalpaymentshub"
 name = "drivers.utils"
-version = "0.0.30"
+version = "0.0.34"
 repository = "local"
 
 [[dependency]]
 org = "digitalpaymentshub"
 name = "payments_hub"
 repository = "local"
-version = "0.0.12"
+version = "0.0.16"

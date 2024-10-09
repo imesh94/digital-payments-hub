@@ -41,7 +41,7 @@ public function main() returns error? {
     check utils:initializeDriverListeners(driver, new DriverTCPConnectionService(driver.name));
     // http client initialization
     check utils:initializeHubClient(payments_hub.base_url);
-        // register the service
+    // register the service
     string driverGatewayUrl = driver.driver_api.gateway_url;
     models:DriverRegisterModel driverMetadata = utils:createDriverRegisterModel(driver.name, driver.code, [],
         driverGatewayUrl);
