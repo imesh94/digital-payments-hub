@@ -1,14 +1,14 @@
 openapi: 3.0.1
 info:
   title: Driver Api
-  version: 0.0.2
+  version: 0.0.1
 servers:
   - url: '{server}:{port}/driver-api'
     variables:
       server:
         default: http://localhost
       port:
-        default: '9093'
+        default: driver.driver_api.port
 paths:
   /payments:
     post:
@@ -34,6 +34,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorPayload'
+        '501':
+          description: NotImplemented
   /accounts/look-up:
     post:
       operationId: postAccountsLookUp
@@ -92,7 +94,6 @@ components:
           type: string
     AccountLookupRequest:
       required:
-        - bicCode
         - proxyType
         - proxyValue
       type: object
