@@ -1,15 +1,26 @@
 [driver]
 name = "ypay"
 code = "MY"
+
 [driver.inbound]
 transport = "http"
-port = 8100
-[driver.outbound]
 host = "localhost"
-port = 9101
+port = 8100
 
-[payment_hub]
-baseUrl = "http://localhost:9090"
+# url of the country switch
+[driver.outbound]
+transport = "http"
+host = "localhost"
+port = 8300
 
-[payment_network]
-baseUrl = "http://localhost:9301"
+# hub facing api of the driver
+[driver.driver_api]
+host = "localhost"
+port = 9093
+gateway_url = "http://localhost:9093"
+
+[payments_hub]
+base_url = "http://localhost:9100"
+
+[ballerina.log]
+level = "DEBUG"

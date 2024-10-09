@@ -14,7 +14,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/http;
 
-const PROXY_RESOLUTION_ENQUIRY_TRANSACTION_CODE = "611";
+import digitalpaymentshub/payments_hub.models;
 
-const BIC_CODE = "bicCode";
+service /driver\-api on new http:Listener(driver.driver_api.port) {
+    resource function post payments(@http:Header string x\-correlation\-id, models:TransactionsRequest payload)
+        returns http:Ok|http:NotImplemented {
+
+        return http:NOT_IMPLEMENTED;
+    };
+
+    resource function post accounts/look\-up(@http:Header string x\-correlation\-id,
+            models:AccountLookupRequest accountLookupRequest) returns models:AccountLookupResponse|http:NotImplemented {
+
+        return http:NOT_IMPLEMENTED;
+    };
+}

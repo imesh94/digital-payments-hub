@@ -14,8 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import drivers.paynet.models;
-
+import drivers.ypay.models;
 import ballerinax/financial.iso20022;
 
 function transformPrxy004toPacs002(models:PrxyLookUpRspnCBFT prxyLookUpRspnCbft)
@@ -83,7 +82,7 @@ function getAccountIds(models:Regn[]? registers) returns string {
         foreach models:Regn value in registers {
             result += value.Acct.Id.Othr.Id + "|";
         }
-        return result.substring(0, result.length() - 1);
+        return result.length() > 0 ? result.substring(0, result.length() - 1) : result;
     }
     return "";
 
@@ -96,7 +95,7 @@ function getAccountNames(models:Regn[]? registers) returns string {
         foreach models:Regn value in registers {
             result += (value.Acct.Nm ?: "") + "|";
         }
-        return result.substring(0, result.length() - 1);
+        return result.length() > 0 ? result.substring(0, result.length() - 1) : result;
     }
     return "";
 
@@ -109,32 +108,11 @@ function getAgentIds(models:Regn[]? registers) returns string {
         foreach models:Regn value in registers {
             result += value.Agt.FinInstnId.Othr.Id + "|";
         }
-        return result.substring(0, result.length() - 1);
+        return result.length() > 0 ? result.substring(0, result.length() - 1) : result;
     }
     return "";
 
 }
-
-isolated function transformPacs008toFundTransfer(iso20022:FIToFICstmrCdtTrf fiToFiCstmrCdtTrf) returns models:fundTransfer|error => {
-    data: {
-        businessMessageId: check generateXBusinessMsgId(fiToFiCstmrCdtTrf.CdtTrfTxInf[0].DbtrAcct?.Id?.Othr?.Id ?: ""),
-        createdDateTime: check getCurrentDateTime(),
-        proxy: {
-            tp: resolveProxyType(fiToFiCstmrCdtTrf.SplmtryData),
-            value: resolveProxy(fiToFiCstmrCdtTrf.SplmtryData)
-        },
-        account: {
-            id: fiToFiCstmrCdtTrf.CdtTrfTxInf[0].DbtrAcct?.Id?.Othr?.Id ?: "",
-            name: fiToFiCstmrCdtTrf.CdtTrfTxInf[0].DbtrAcct?.Nm ?: "",
-            tp: "CACC",
-            accountHolderType: "S"
-        },
-        secondaryId: {
-            tp: "NRIC",
-            value: "94771234567"
-        }
-    }
-};
 
 isolated function transformFundTransferResponsetoPacs002(models:fundTransferResponse fundTransferResponse,
         iso20022:FIToFICstmrCdtTrf isoPacs008Msg) returns iso20022:FIToFIPmtStsRpt => {

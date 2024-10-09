@@ -1,20 +1,26 @@
 [driver]
 name = "xpay"
 code = "LK"
+
 [driver.inbound]
 transport = "tcp"
-port = 8085
-[driver.outbound]
 host = "localhost"
-port = 9100
+port = 8085
 
-[payment_hub]
-baseUrl = "http://localhost:9090"
+# url of the country switch
+[driver.outbound]
+transport = "tcp"
+host = "localhost"
+port = 8200
 
-[payment_network]
-#baseUrl = "tcp://localhost:9200"
-baseUrl = "http://localhost:9300"
+# hub facing api of the driver
+[driver.driver_api]
+host = "localhost"
+port = 9091
+gateway_url = "http://localhost:9091"
+
+[payments_hub]
+base_url = "http://localhost:9100"
 
 [ballerina.log]
 level = "DEBUG"
-

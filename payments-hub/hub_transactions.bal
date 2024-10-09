@@ -22,8 +22,8 @@ import ballerina/log;
 # Send payment message to target driver and get the response.
 #
 # + countryCode - country code of the target driver  
-# + correlationId - x-correlation-id to track the request 
-# + payload - request payload  
+# + correlationId - x-correlation-id to track the request
+# + payload - request payload
 # + return - response from the destination driver | error response
 function sendPaymentRequestToTargetDriver(string countryCode, string correlationId, models:TransactionsRequest payload)
     returns json {
@@ -77,8 +77,8 @@ function sendPaymentRequestToTargetDriver(string countryCode, string correlation
 # Send lookup message to target driver and get the response.
 #
 # + countryCode - country code of the target driver  
-# + correlationId - x-correlation-id to track the request 
-# + payload - request payload  
+# + correlationId - x-correlation-id to track the request
+# + payload - request payload
 # + return - response from the destination driver | error response
 function sendLookupRequestToTargetDriver(string countryCode, string correlationId, models:AccountLookupRequest payload)
     returns json {

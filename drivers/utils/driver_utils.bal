@@ -22,7 +22,6 @@ import ballerina/tcp;
 import digitalpaymentshub/payments_hub.models;
 
 http:Client hubClient = check new ("localhost:9090"); //ToDo: Remove
-public http:Client paymentNetworkClient = check new ("localhost:9092"); //ToDo: Remove
 
 # Initialize http/tcp listeners for the driver based on configurations.
 #
@@ -59,8 +58,7 @@ public function registerDriverAtHub(models:DriverRegisterModel driverRegisterMet
 
     log:printInfo(string `[Driver Utils] Registering driver ${driverRegisterMetadata.driverName} at payments hub.`,
             DriverInfo = driverRegisterMetadata.toJson());
-    models:DriverMetadata registerResponse = check hubClient->/payments\-hub/register.post(driverRegisterMetadata);
-
+    models:DriverRegisterModel registerResponse = check hubClient->/payments\-hub/register.post(driverRegisterMetadata);
     // ToDo: Add error handling and retry logic
     log:printInfo(string `[Driver Utils] Registration response received.`, Response = registerResponse.toJson());
 
